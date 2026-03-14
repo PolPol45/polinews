@@ -8,18 +8,27 @@ import html
 import json
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from collector.config import DEFAULT_DB_PATH, DEFAULT_FEEDS_CSV, DEFAULT_LOG_DIR
-from collector.config import DEDUP_WINDOW_HOURS
+from collector.canonical_url import normalize_canonical_url, resolve_canonical_url
+from collector.config import (
+    CANONICAL_RESOLVE_BACKOFF_SECONDS,
+    CANONICAL_RESOLVE_MAX_RETRIES,
+    CANONICAL_RESOLVE_TIMEOUT_SECONDS,
+    DEDUP_WINDOW_HOURS,
+    DEFAULT_DB_PATH,
+    DEFAULT_FEEDS_CSV,
+    DEFAULT_LOG_DIR,
+)
 from collector.db import (
     RawFeedItem,
     connect_db,
@@ -33,16 +42,6 @@ from collector.db import (
 from collector.dedup import DEDUP_REASON_CODE, build_dedup_key, build_title_fingerprint
 
 DEFAULT_TOPICS_FILE = Path("docs/mvp_offchain/specs/topics_v1.md")
-
-TRACKING_QUERY_KEYS = {
-    "fbclid",
-    "gclid",
-    "mc_cid",
-    "mc_eid",
-    "igshid",
-    "ref",
-    "ref_src",
-}
 
 
 def utc_now_iso() -> str:
@@ -111,32 +110,8 @@ def parse_datetime_utc(value: str | None) -> str | None:
 
 
 def normalize_url(url: str | None) -> str | None:
-    if not url:
-        return None
-    try:
-        parsed = urlsplit(url.strip())
-    except ValueError:
-        return None
-
-    scheme = parsed.scheme.lower()
-    if scheme not in {"http", "https"}:
-        return None
-    if not parsed.netloc:
-        return None
-
-    host = parsed.netloc.lower()
-    filtered_params: list[tuple[str, str]] = []
-    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
-        key_lower = key.lower()
-        if key_lower.startswith("utm_"):
-            continue
-        if key_lower in TRACKING_QUERY_KEYS:
-            continue
-        filtered_params.append((key, value))
-
-    query = urlencode(filtered_params, doseq=True)
-    normalized = urlunsplit((scheme, host, parsed.path or "", query, ""))
-    return normalized
+    """Backwards-compatible alias for tests/callers."""
+    return normalize_canonical_url(url)
 
 
 def domain_from_url(url: str | None) -> str | None:
@@ -213,11 +188,15 @@ class NormalizerLogger:
         accepted: int,
         rejected: int,
         duplicates_count: int,
+        canonical_resolved_count: int,
+        canonical_fallback_count: int,
+        canonical_error_count: int,
         error_class: str,
     ) -> None:
         line = (
             f"{run_id},{start_ts},{end_ts},{processed},{accepted},{rejected},"
-            f"{duplicates_count},{error_class}"
+            f"{duplicates_count},{canonical_resolved_count},{canonical_fallback_count},"
+            f"{canonical_error_count},{error_class}"
         )
         self._append(self.run_log_path, line)
         print(f"[NORMALIZE_RUN] {line}")
@@ -240,6 +219,9 @@ def normalize_item(
     feed_topic_map: dict[str, str],
     valid_topics: set[str],
     normalization_ts: str,
+    canonical_timeout_seconds: int,
+    canonical_max_retries: int,
+    canonical_backoff_seconds: Iterable[int],
 ) -> tuple[dict[str, Any] | None, Rejection | None]:
     payload = parse_payload(item.payload_json)
 
@@ -255,13 +237,20 @@ def normalize_item(
     if not snippet:
         return None, Rejection(raw_id=item.raw_id, feed_id=item.feed_id, reason_code="missing_snippet")
 
-    article_url_candidate = payload.get("link") or item.source_url
-    article_url = normalize_url(article_url_candidate)
-    if not article_url:
-        return None, Rejection(raw_id=item.raw_id, feed_id=item.feed_id, reason_code="invalid_url")
+    source_url = normalize_canonical_url(item.source_url) or normalize_canonical_url(payload.get("source_url"))
+    canonical_url, resolution_mode, canonical_error = resolve_canonical_url(
+        payload.get("link"),
+        source_url,
+        timeout_seconds=canonical_timeout_seconds,
+        max_retries=canonical_max_retries,
+        backoff_seconds=canonical_backoff_seconds,
+    )
+    if not canonical_url:
+        reason = canonical_error or "invalid_canonical_url"
+        return None, Rejection(raw_id=item.raw_id, feed_id=item.feed_id, reason_code=reason)
 
-    source_url = normalize_url(item.source_url) or normalize_url(payload.get("source_url")) or article_url
-    publisher_domain = domain_from_url(source_url) or domain_from_url(article_url)
+    source_url = source_url or canonical_url
+    publisher_domain = domain_from_url(source_url) or domain_from_url(canonical_url)
 
     source_name = clean_text(item.source_name or payload.get("source_name")) or publisher_domain
     if not source_name or not publisher_domain:
@@ -291,8 +280,10 @@ def normalize_item(
             "story_id": story_id,
             "source_name": source_name,
             "source_url": source_url,
+            "canonical_url": canonical_url,
             "publisher_domain": publisher_domain,
         },
+        "_canonical_resolution_mode": resolution_mode,
     }
     return normalized, None
 
@@ -303,6 +294,9 @@ def run_once(
     topics_file: Path,
     log_dir: Path,
     dedup_window_hours: int,
+    canonical_timeout_seconds: int,
+    canonical_max_retries: int,
+    canonical_backoff_seconds: tuple[int, ...],
 ) -> int:
     if not db_path.exists():
         raise RuntimeError(f"db_not_found: {db_path}")
@@ -326,6 +320,9 @@ def run_once(
     accepted = 0
     rejected = 0
     duplicates_count = 0
+    canonical_resolved_count = 0
+    canonical_fallback_count = 0
+    canonical_error_count = 0
     error_class = ""
     normalization_ts = utc_now_iso()
 
@@ -337,9 +334,14 @@ def run_once(
                 feed_topic_map=feed_topic_map,
                 valid_topics=valid_topics,
                 normalization_ts=normalization_ts,
+                canonical_timeout_seconds=canonical_timeout_seconds,
+                canonical_max_retries=canonical_max_retries,
+                canonical_backoff_seconds=canonical_backoff_seconds,
             )
             if rejection:
                 rejected += 1
+                if rejection.reason_code == "invalid_canonical_url":
+                    canonical_error_count += 1
                 logger.log_reject(
                     run_id=run_id,
                     raw_id=rejection.raw_id,
@@ -351,11 +353,18 @@ def run_once(
 
             story = normalized["story"]
             story_source = normalized["story_source"]
+            resolution_mode = normalized["_canonical_resolution_mode"]
+            if resolution_mode in {"resolved_direct", "resolved_redirect"}:
+                canonical_resolved_count += 1
+            elif resolution_mode == "fallback_source":
+                canonical_fallback_count += 1
+            else:
+                canonical_error_count += 1
             title_fingerprint = build_title_fingerprint(story["headline"])
             dedup_key = build_dedup_key(
                 title_fingerprint=title_fingerprint,
                 publisher_domain=story_source["publisher_domain"],
-                url_normalized=story_source["source_url"],
+                url_normalized=story_source["canonical_url"] or story_source["source_url"],
                 published_at_iso=story["published_at"],
                 window_hours=dedup_window_hours,
             )
@@ -398,6 +407,9 @@ def run_once(
             accepted=accepted,
             rejected=rejected,
             duplicates_count=duplicates_count,
+            canonical_resolved_count=canonical_resolved_count,
+            canonical_fallback_count=canonical_fallback_count,
+            canonical_error_count=canonical_error_count,
             error_class=error_class,
         )
         conn.close()
@@ -405,7 +417,10 @@ def run_once(
     print(
         "[NORMALIZE_SUMMARY] "
         f"run_id={run_id} processed={processed} accepted={accepted} "
-        f"rejected={rejected} duplicates={duplicates_count}"
+        f"rejected={rejected} duplicates={duplicates_count} "
+        f"canonical_resolved={canonical_resolved_count} "
+        f"canonical_fallback={canonical_fallback_count} "
+        f"canonical_error={canonical_error_count}"
     )
     return 0
 
@@ -418,7 +433,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topics-file", type=Path, default=DEFAULT_TOPICS_FILE)
     parser.add_argument("--log-dir", type=Path, default=DEFAULT_LOG_DIR)
     parser.add_argument("--dedup-window-hours", type=int, default=DEDUP_WINDOW_HOURS)
+    parser.add_argument("--canonical-timeout-seconds", type=int, default=CANONICAL_RESOLVE_TIMEOUT_SECONDS)
+    parser.add_argument("--canonical-max-retries", type=int, default=CANONICAL_RESOLVE_MAX_RETRIES)
+    parser.add_argument(
+        "--canonical-backoff-seconds",
+        type=str,
+        default=",".join(str(i) for i in CANONICAL_RESOLVE_BACKOFF_SECONDS),
+        help="Comma-separated backoff seconds, e.g. 1,3,9",
+    )
     return parser.parse_args()
+
+
+def parse_backoff_csv(value: str) -> tuple[int, ...]:
+    chunks = [chunk.strip() for chunk in value.split(",") if chunk.strip()]
+    if not chunks:
+        return tuple()
+    return tuple(int(chunk) for chunk in chunks)
 
 
 def main() -> int:
@@ -434,6 +464,9 @@ def main() -> int:
             topics_file=args.topics_file,
             log_dir=args.log_dir,
             dedup_window_hours=args.dedup_window_hours,
+            canonical_timeout_seconds=args.canonical_timeout_seconds,
+            canonical_max_retries=args.canonical_max_retries,
+            canonical_backoff_seconds=parse_backoff_csv(args.canonical_backoff_seconds),
         )
     except Exception as exc:  # noqa: BLE001
         print(f"[NORMALIZE_ERROR] {exc}", file=sys.stderr)

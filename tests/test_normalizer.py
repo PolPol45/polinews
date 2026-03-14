@@ -13,6 +13,7 @@ from collector.normalizer import (
     load_feed_topic_map,
     load_topic_slugs,
     normalize_url,
+    parse_backoff_csv,
     parse_datetime_utc,
 )
 
@@ -102,10 +103,20 @@ class TestNormalizerUtils(unittest.TestCase):
                 accepted=7,
                 rejected=3,
                 duplicates_count=2,
+                canonical_resolved_count=4,
+                canonical_fallback_count=2,
+                canonical_error_count=1,
                 error_class="",
             )
             line = (Path(tmpdir) / "normalization_runs.log").read_text(encoding="utf-8").strip()
-            self.assertEqual(line, "r1,2026-03-14T00:00:00+00:00,2026-03-14T00:01:00+00:00,10,7,3,2,")
+            self.assertEqual(
+                line,
+                "r1,2026-03-14T00:00:00+00:00,2026-03-14T00:01:00+00:00,10,7,3,2,4,2,1,",
+            )
+
+    def test_parse_backoff_csv(self) -> None:
+        self.assertEqual(parse_backoff_csv("1,3,9"), (1, 3, 9))
+        self.assertEqual(parse_backoff_csv(""), tuple())
 
 
 if __name__ == "__main__":

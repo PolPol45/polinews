@@ -57,6 +57,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           story_id TEXT NOT NULL,
           source_name TEXT NOT NULL,
           source_url TEXT NOT NULL,
+          canonical_url TEXT,
           publisher_domain TEXT NOT NULL,
           FOREIGN KEY (story_id) REFERENCES stories(story_id)
         );
@@ -68,6 +69,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ON story_sources(story_id);
         """
     )
+    _ensure_story_sources_canonical_column(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS dedup_registry (
@@ -192,16 +194,28 @@ def insert_story_source(
     story_id: str,
     source_name: str,
     source_url: str,
+    canonical_url: str | None,
     publisher_domain: str,
 ) -> bool:
     cursor = conn.execute(
         """
         INSERT OR IGNORE INTO story_sources (
-          story_source_id, story_id, source_name, source_url, publisher_domain
-        ) VALUES (?, ?, ?, ?, ?)
+          story_source_id, story_id, source_name, source_url, canonical_url, publisher_domain
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (story_source_id, story_id, source_name, source_url, publisher_domain),
+        (story_source_id, story_id, source_name, source_url, canonical_url, publisher_domain),
     )
+    if cursor.rowcount == 0 and canonical_url:
+        # Backfill canonical_url for pre-W1-06 rows created before this column existed.
+        conn.execute(
+            """
+            UPDATE story_sources
+            SET canonical_url = ?
+            WHERE story_source_id = ?
+              AND (canonical_url IS NULL OR TRIM(canonical_url) = '')
+            """,
+            (canonical_url, story_source_id),
+        )
     return cursor.rowcount > 0
 
 
@@ -230,3 +244,9 @@ def insert_dedup_registry(
         (dedup_key, story_id, raw_id, created_at),
     )
     return cursor.rowcount > 0
+
+
+def _ensure_story_sources_canonical_column(conn: sqlite3.Connection) -> None:
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(story_sources)").fetchall()]
+    if "canonical_url" not in columns:
+        conn.execute("ALTER TABLE story_sources ADD COLUMN canonical_url TEXT")

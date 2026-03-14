@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS story_sources (
   story_id TEXT NOT NULL,
   source_name TEXT NOT NULL,
   source_url TEXT NOT NULL,
+  canonical_url TEXT,
   publisher_domain TEXT NOT NULL,
   FOREIGN KEY (story_id) REFERENCES stories(story_id)
 );

@@ -46,7 +46,10 @@ python3 collector/normalizer.py \
   --feeds-csv docs/mvp_offchain/specs/feed_registry_v1.csv \
   --topics-file docs/mvp_offchain/specs/topics_v1.md \
   --log-dir logs \
-  --dedup-window-hours 24
+  --dedup-window-hours 24 \
+  --canonical-timeout-seconds 8 \
+  --canonical-max-retries 3 \
+  --canonical-backoff-seconds 1,3,9
 ```
 
 Default output artifacts:
@@ -55,3 +58,4 @@ Default output artifacts:
   - `story_sources`
 - Run logs: `logs/normalization_runs.log`
 - Reject logs: `logs/normalization_rejects.log`
+- Canonical URL modes: `resolved_direct`, `resolved_redirect`, `fallback_source`
