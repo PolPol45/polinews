@@ -17,6 +17,9 @@
 - 200 response fields:
   - `story_id`, `topic_slug`, `headline`, `summary`, `key_points[]`, `sources[]`, `published_at`
   - `quiz_available`, `comment_enabled`
+- Availability rules:
+  - `quiz_available=true` only if runtime quiz for the story is available.
+  - `comment_enabled` remains independent from quiz availability.
 - Errors:
   - `404` story not found
   - `410` story exists but is not publishable (or fails runtime minimum checks)
@@ -34,13 +37,16 @@
 ## Verification and rewards API
 
 ### `GET /quiz?story_id=`
-- 200: `quiz_id`, `questions[]`, `attempts_remaining`, `cooldown_seconds`.
-- Errors: 404, 429.
+- 200:
+  - `quiz_id`, `story_id`, `questions[]`, `attempts_remaining`, `cooldown_seconds`.
+  - `questions[]`: `question_id`, `text`, `options[]`.
+  - `options[]`: `option_id`, `text`.
+- Errors: 404, 409, 429.
 
 ### `POST /attempt`
 - Request: `quiz_id`, `story_id`, `answers[]`, `client_elapsed_seconds`.
 - 200: `passed`, `score`, `credits_awarded`, `balance_preview`, `cooldown_seconds`.
-- Errors: 400, 403, 409, 429.
+- Errors: 400, 403, 404, 409, 429.
 
 ### `POST /comment`
 - Request: `story_id`, `text`.

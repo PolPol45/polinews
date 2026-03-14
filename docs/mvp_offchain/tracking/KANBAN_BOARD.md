@@ -4,13 +4,12 @@ Regola dipendenze richiesta: `Dipende da` indica solo chi deve agire (`ME/Codex`
 
 ## Snapshot
 - Total cards: 65
-- Backlog: 45
+- Backlog: 44
 - In progress: 0
 - Blocked: 1
-- Done: 19
+- Done: 20
 
 ## Backlog
-- **W2-04** - Define quiz format | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D9 | Depends on IDs: `W2-01`
 - **W2-05** - Implement quiz pool generation | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D10 | Depends on IDs: `W2-04`
 - **W2-06** - Implement GET /quiz | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D10 | Depends on IDs: `W2-05`
 - **W2-07** - Implement POST /attempt | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D11 | Depends on IDs: `W2-06`
@@ -82,4 +81,5 @@ Regola dipendenze richiesta: `Dipende da` indica solo chi deve agire (`ME/Codex`
 - **W2-01** - Define story template | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D8 | Depends on IDs: `W1-12`
 - **W2-02** - Implement key-point generation | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D9 | Depends on IDs: `W2-01`
 - **W2-03** - Implement story rendering | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D9 | Depends on IDs: `W2-01`
+- **W2-04** - Define quiz format | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D9 | Depends on IDs: `W2-01`
 
