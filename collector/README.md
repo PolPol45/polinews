@@ -131,3 +131,39 @@ Contracts implemented:
 Error mapping:
 - `404` for missing story
 - `410` for `not_publishable` or runtime minimum violations
+
+---
+
+# Quiz Pool Generator (W2-05)
+
+Run once on publishable stories:
+
+```bash
+python3 collector/quiz_pool_generator.py --run-once --db-path data/polinews.db
+```
+
+Optional overrides:
+
+```bash
+python3 collector/quiz_pool_generator.py \
+  --run-once \
+  --db-path data/polinews.db \
+  --log-dir logs \
+  --ollama-base-url http://localhost:11434 \
+  --model qwen2.5:3b \
+  --timeout-seconds 30 \
+  --max-retries 2 \
+  --backoff-seconds 1,3 \
+  --max-stories 150 \
+  --target-size 10 \
+  --min-size 4 \
+  --generator-version w2-05-v1
+```
+
+Default output artifacts:
+- SQLite DB writes:
+  - `quizzes`
+  - `quiz_questions`
+  - `stories.quiz_status`, `stories.quiz_unavailable_reason`, `stories.quiz_pool_version`, `stories.quiz_updated_at`
+- Run logs: `logs/quiz_pool_runs.log`
+- Reject logs: `logs/quiz_pool_rejects.log`

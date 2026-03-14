@@ -45,6 +45,15 @@ class TestStoryService(unittest.TestCase):
             key_points=["Point one", "Point two", "Point three", "Point four"],
             created_at="2026-03-14T10:11:00+00:00",
         )
+        conn.execute(
+            """
+            UPDATE stories
+            SET quiz_status = 'quiz_available',
+                quiz_pool_version = 1,
+                quiz_updated_at = '2026-03-14T10:12:00+00:00'
+            WHERE story_id = 'story_ok'
+            """
+        )
 
         insert_story(
             conn,
@@ -84,7 +93,7 @@ class TestStoryService(unittest.TestCase):
         self.assertEqual(payload["topic_slug"], "world")
         self.assertEqual(len(payload["key_points"]), 4)
         self.assertEqual(len(payload["sources"]), 1)
-        self.assertFalse(payload["quiz_available"])
+        self.assertTrue(payload["quiz_available"])
         self.assertFalse(payload["comment_enabled"])
         self.assertLessEqual(len(payload["summary"]), 320)
 
@@ -131,4 +140,3 @@ class TestStoryService(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

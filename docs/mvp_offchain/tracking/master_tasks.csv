@@ -20,7 +20,7 @@ W2-01,2,Founder,P0,W1-12,DONE,D8,Define story template,Template approved,specs/s
 W2-02,2,Freelance,P0,W2-01,DONE,D9,Implement key-point generation,3-5 key points per story,tracking/w2_02_keypoints_qa_report.md
 W2-03,2,Freelance,P0,W2-01,DONE,D9,Implement story rendering,Source attribution complete,tracking/evidence/w2_03_smoke_notes.md
 W2-04,2,Founder,P0,W2-01,DONE,D9,Define quiz format,Spec approved,specs/quiz_spec_v1.md
-W2-05,2,Freelance,P0,W2-04,NOT_STARTED,D10,Implement quiz pool generation,Pool for >=80 percent stories,coverage report
+W2-05,2,Freelance,P0,W2-04,DONE,D10,Implement quiz pool generation,Pool for >=80 percent stories,tracking/w2_05_quiz_pool_qa_report.md
 W2-06,2,Freelance,P0,W2-05,NOT_STARTED,D10,Implement GET /quiz,Returns randomized quiz,api tests
 W2-07,2,Freelance,P0,W2-06,NOT_STARTED,D11,Implement POST /attempt,Returns score/pass/credits,api tests
 W2-08,2,Freelance,P0,W2-03,NOT_STARTED,D11,Implement POST /comment,Spam blocked valid accepted,test cases

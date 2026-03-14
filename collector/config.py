@@ -26,6 +26,18 @@ KEYPOINTS_BACKOFF_SECONDS = _parse_csv_ints(
     default=(1, 3),
 )
 KEYPOINTS_MAX_STORIES_PER_RUN = int(os.getenv("KEYPOINTS_MAX_STORIES_PER_RUN", "150"))
+QUIZ_POOL_ENABLED = os.getenv("QUIZ_POOL_ENABLED", "1") == "1"
+QUIZ_POOL_MODEL = os.getenv("QUIZ_POOL_MODEL", KEYPOINTS_MODEL)
+QUIZ_POOL_TIMEOUT_SECONDS = int(os.getenv("QUIZ_POOL_TIMEOUT_SECONDS", "30"))
+QUIZ_POOL_MAX_RETRIES = int(os.getenv("QUIZ_POOL_MAX_RETRIES", "2"))
+QUIZ_POOL_BACKOFF_SECONDS = _parse_csv_ints(
+    os.getenv("QUIZ_POOL_BACKOFF_SECONDS", "1,3"),
+    default=(1, 3),
+)
+QUIZ_POOL_MAX_STORIES_PER_RUN = int(os.getenv("QUIZ_POOL_MAX_STORIES_PER_RUN", "150"))
+QUIZ_POOL_TARGET_SIZE = int(os.getenv("QUIZ_POOL_TARGET_SIZE", "10"))
+QUIZ_POOL_MIN_SIZE = int(os.getenv("QUIZ_POOL_MIN_SIZE", "4"))
+QUIZ_POOL_GENERATOR_VERSION = os.getenv("QUIZ_POOL_GENERATOR_VERSION", "w2-05-v1")
 
 DEFAULT_FEEDS_CSV = Path("docs/mvp_offchain/specs/feed_registry_v1.csv")
 DEFAULT_DB_PATH = Path("data/polinews.db")

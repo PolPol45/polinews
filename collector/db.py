@@ -94,6 +94,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     )
     _ensure_story_sources_canonical_column(conn)
     _ensure_stories_publishability_columns(conn)
+    _ensure_stories_quiz_columns(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS dedup_registry (
@@ -104,6 +105,49 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS quizzes (
+          quiz_id TEXT PRIMARY KEY,
+          story_id TEXT NOT NULL,
+          version INTEGER NOT NULL,
+          question_pool_size INTEGER NOT NULL,
+          pool_signature TEXT,
+          generator_version TEXT,
+          created_at TIMESTAMP NOT NULL,
+          FOREIGN KEY (story_id) REFERENCES stories(story_id)
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_quizzes_story_version
+        ON quizzes(story_id, version DESC);
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS quiz_questions (
+          question_id TEXT PRIMARY KEY,
+          quiz_id TEXT NOT NULL,
+          question_text TEXT NOT NULL,
+          task_type TEXT NOT NULL DEFAULT 'comprehension',
+          options_json TEXT,
+          correct_option_id TEXT,
+          annotation_campaign_id TEXT,
+          created_at TIMESTAMP NOT NULL,
+          FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz
+        ON quiz_questions(quiz_id);
+        """
+    )
+    _ensure_quizzes_columns(conn)
+    _ensure_quiz_questions_columns(conn)
     conn.commit()
 
 
@@ -387,6 +431,178 @@ def count_story_key_points(conn: sqlite3.Connection, *, story_id: str) -> int:
     return int(row[0]) if row else 0
 
 
+def fetch_quiz_pool_candidates(conn: sqlite3.Connection, *, limit: int) -> list[dict[str, str]]:
+    rows = conn.execute(
+        """
+        SELECT s.story_id, s.topic_slug, s.headline, s.summary
+        FROM stories s
+        WHERE s.status = 'publishable'
+        ORDER BY s.created_at ASC, s.story_id ASC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return [
+        {
+            "story_id": str(row[0]),
+            "topic_slug": str(row[1]),
+            "headline": str(row[2]),
+            "summary": str(row[3]),
+        }
+        for row in rows
+    ]
+
+
+def fetch_story_key_points_texts(conn: sqlite3.Connection, *, story_id: str) -> list[str]:
+    rows = conn.execute(
+        """
+        SELECT text
+        FROM story_key_points
+        WHERE story_id = ?
+        ORDER BY position ASC
+        """,
+        (story_id,),
+    ).fetchall()
+    return [str(row[0]).strip() for row in rows if row[0] and str(row[0]).strip()]
+
+
+def fetch_latest_quiz_metadata(conn: sqlite3.Connection, *, story_id: str) -> dict[str, Any] | None:
+    row = conn.execute(
+        """
+        SELECT quiz_id, version, question_pool_size, pool_signature, generator_version
+        FROM quizzes
+        WHERE story_id = ?
+        ORDER BY version DESC
+        LIMIT 1
+        """,
+        (story_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "quiz_id": str(row[0]),
+        "version": int(row[1]),
+        "question_pool_size": int(row[2]),
+        "pool_signature": row[3],
+        "generator_version": row[4],
+    }
+
+
+def insert_quiz(
+    conn: sqlite3.Connection,
+    *,
+    quiz_id: str,
+    story_id: str,
+    version: int,
+    question_pool_size: int,
+    pool_signature: str,
+    generator_version: str,
+    created_at: str,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO quizzes (
+          quiz_id, story_id, version, question_pool_size, pool_signature, generator_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (quiz_id, story_id, version, question_pool_size, pool_signature, generator_version, created_at),
+    )
+
+
+def insert_quiz_questions(
+    conn: sqlite3.Connection,
+    *,
+    quiz_id: str,
+    questions: Sequence[dict[str, Any]],
+    created_at: str,
+) -> None:
+    for question in questions:
+        conn.execute(
+            """
+            INSERT INTO quiz_questions (
+              question_id, quiz_id, question_text, task_type, options_json, correct_option_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                question["question_id"],
+                quiz_id,
+                question["question_text"],
+                question["task_type"],
+                json.dumps(question["options"], ensure_ascii=False),
+                question["correct_option_id"],
+                created_at,
+            ),
+        )
+
+
+def update_story_quiz_state(
+    conn: sqlite3.Connection,
+    *,
+    story_id: str,
+    quiz_status: str,
+    quiz_unavailable_reason: str | None,
+    quiz_pool_version: int | None,
+    quiz_updated_at: str,
+) -> None:
+    conn.execute(
+        """
+        UPDATE stories
+        SET quiz_status = ?,
+            quiz_unavailable_reason = ?,
+            quiz_pool_version = ?,
+            quiz_updated_at = ?
+        WHERE story_id = ?
+        """,
+        (quiz_status, quiz_unavailable_reason, quiz_pool_version, quiz_updated_at, story_id),
+    )
+
+
+def count_publishable_stories(conn: sqlite3.Connection) -> int:
+    row = conn.execute("SELECT COUNT(*) FROM stories WHERE status = 'publishable'").fetchone()
+    return int(row[0]) if row else 0
+
+
+def count_quiz_available_stories(conn: sqlite3.Connection) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) FROM stories WHERE status = 'publishable' AND quiz_status = 'quiz_available'"
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def count_quizzes_for_story(conn: sqlite3.Connection, *, story_id: str) -> int:
+    row = conn.execute("SELECT COUNT(*) FROM quizzes WHERE story_id = ?", (story_id,)).fetchone()
+    return int(row[0]) if row else 0
+
+
+def fetch_quiz_questions_for_quiz(conn: sqlite3.Connection, *, quiz_id: str) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT question_id, question_text, task_type, options_json, correct_option_id
+        FROM quiz_questions
+        WHERE quiz_id = ?
+        ORDER BY created_at ASC, question_id ASC
+        """,
+        (quiz_id,),
+    ).fetchall()
+    output: list[dict[str, Any]] = []
+    for row in rows:
+        options_raw = row[3] or "[]"
+        try:
+            options = json.loads(options_raw)
+        except json.JSONDecodeError:
+            options = []
+        output.append(
+            {
+                "question_id": str(row[0]),
+                "question_text": str(row[1]),
+                "task_type": str(row[2]),
+                "options": options,
+                "correct_option_id": str(row[4]),
+            }
+        )
+    return output
+
+
 def _ensure_story_sources_canonical_column(conn: sqlite3.Connection) -> None:
     columns = [row[1] for row in conn.execute("PRAGMA table_info(story_sources)").fetchall()]
     if "canonical_url" not in columns:
@@ -401,3 +617,33 @@ def _ensure_stories_publishability_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE stories ADD COLUMN publishability_reason TEXT")
     if "keypoints_generated_at" not in columns:
         conn.execute("ALTER TABLE stories ADD COLUMN keypoints_generated_at TIMESTAMP")
+
+
+def _ensure_stories_quiz_columns(conn: sqlite3.Connection) -> None:
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(stories)").fetchall()]
+    if "quiz_status" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN quiz_status TEXT")
+    if "quiz_unavailable_reason" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN quiz_unavailable_reason TEXT")
+    if "quiz_pool_version" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN quiz_pool_version INTEGER")
+    if "quiz_updated_at" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN quiz_updated_at TIMESTAMP")
+
+
+def _ensure_quizzes_columns(conn: sqlite3.Connection) -> None:
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(quizzes)").fetchall()]
+    if "pool_signature" not in columns:
+        conn.execute("ALTER TABLE quizzes ADD COLUMN pool_signature TEXT")
+    if "generator_version" not in columns:
+        conn.execute("ALTER TABLE quizzes ADD COLUMN generator_version TEXT")
+
+
+def _ensure_quiz_questions_columns(conn: sqlite3.Connection) -> None:
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(quiz_questions)").fetchall()]
+    if "task_type" not in columns:
+        conn.execute("ALTER TABLE quiz_questions ADD COLUMN task_type TEXT NOT NULL DEFAULT 'comprehension'")
+    if "options_json" not in columns:
+        conn.execute("ALTER TABLE quiz_questions ADD COLUMN options_json TEXT")
+    if "correct_option_id" not in columns:
+        conn.execute("ALTER TABLE quiz_questions ADD COLUMN correct_option_id TEXT")

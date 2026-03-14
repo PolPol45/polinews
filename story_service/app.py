@@ -35,6 +35,7 @@ class StoryRecord:
     key_points: list[str]
     sources: list[dict[str, str]]
     published_at: str
+    quiz_available: bool
 
 
 def _connect_read_only(db_path: Path) -> sqlite3.Connection:
@@ -59,16 +60,27 @@ def _required_text(value: Any) -> str:
     return value.strip()
 
 
+def _stories_has_column(conn: sqlite3.Connection, column_name: str) -> bool:
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(stories)").fetchall()]
+    return column_name in columns
+
+
 def _get_story_row(conn: sqlite3.Connection, story_id: str) -> sqlite3.Row | None:
-    return conn.execute(
+    if _stories_has_column(conn, "quiz_status"):
+        query = """
+            SELECT story_id, topic_slug, headline, summary, published_at, status, quiz_status
+            FROM stories
+            WHERE story_id = ?
+            LIMIT 1
         """
-        SELECT story_id, topic_slug, headline, summary, published_at, status
-        FROM stories
-        WHERE story_id = ?
-        LIMIT 1
-        """,
-        (story_id,),
-    ).fetchone()
+    else:
+        query = """
+            SELECT story_id, topic_slug, headline, summary, published_at, status, NULL AS quiz_status
+            FROM stories
+            WHERE story_id = ?
+            LIMIT 1
+        """
+    return conn.execute(query, (story_id,)).fetchone()
 
 
 def _get_story_key_points(conn: sqlite3.Connection, story_id: str) -> list[str]:
@@ -147,6 +159,7 @@ def _load_story(db_path: Path, story_id: str) -> StoryRecord:
             key_points=key_points,
             sources=sources,
             published_at=row["published_at"],
+            quiz_available=_required_text(row["quiz_status"]) == "quiz_available",
         )
     except sqlite3.OperationalError as exc:
         raise HTTPException(status_code=500, detail=f"schema_error: {exc}") from exc
@@ -163,7 +176,7 @@ def _story_to_contract(story: StoryRecord) -> dict[str, Any]:
         "key_points": story.key_points,
         "sources": story.sources,
         "published_at": story.published_at,
-        "quiz_available": False,
+        "quiz_available": story.quiz_available,
         "comment_enabled": False,
     }
 
@@ -274,4 +287,3 @@ def create_app(db_path: Path | None = None) -> FastAPI:
 
 
 app = create_app()
-

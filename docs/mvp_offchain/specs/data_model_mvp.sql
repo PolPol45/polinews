@@ -29,7 +29,11 @@ CREATE TABLE IF NOT EXISTS stories (
   created_at TIMESTAMP NOT NULL,
   status TEXT NOT NULL DEFAULT 'not_publishable',
   publishability_reason TEXT,
-  keypoints_generated_at TIMESTAMP
+  keypoints_generated_at TIMESTAMP,
+  quiz_status TEXT,
+  quiz_unavailable_reason TEXT,
+  quiz_pool_version INTEGER,
+  quiz_updated_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS story_sources (
@@ -64,6 +68,8 @@ CREATE TABLE IF NOT EXISTS quizzes (
   story_id TEXT NOT NULL,
   version INTEGER NOT NULL,
   question_pool_size INTEGER NOT NULL,
+  pool_signature TEXT,
+  generator_version TEXT,
   created_at TIMESTAMP NOT NULL,
   FOREIGN KEY (story_id) REFERENCES stories(story_id)
 );
@@ -128,6 +134,8 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
   quiz_id TEXT NOT NULL,
   question_text TEXT NOT NULL,
   task_type TEXT NOT NULL DEFAULT 'comprehension',
+  options_json TEXT,
+  correct_option_id TEXT,
   annotation_campaign_id TEXT,
   created_at TIMESTAMP NOT NULL,
   FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
@@ -225,3 +233,4 @@ CREATE TABLE IF NOT EXISTS topic_interest_weekly (
 CREATE INDEX IF NOT EXISTS idx_reading_sessions_story ON reading_sessions(story_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_qa_pairs_topic ON quiz_qa_pairs(topic_slug, created_at);
 CREATE INDEX IF NOT EXISTS idx_story_analytics_date ON story_analytics(date, story_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_story_version ON quizzes(story_id, version DESC);
