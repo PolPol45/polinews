@@ -15,8 +15,21 @@
 ### `GET /stories/:story_id`
 - Returns story page payload.
 - 200 response fields:
-  - `story_id`, `headline`, `snippet`, `key_points[]`, `sources[]`
+  - `story_id`, `topic_slug`, `headline`, `summary`, `key_points[]`, `sources[]`, `published_at`
   - `quiz_available`, `comment_enabled`
+- Errors:
+  - `404` story not found
+  - `410` story exists but is not publishable (or fails runtime minimum checks)
+
+### `GET /stories/:story_id/page`
+- Returns rendered HTML story page in fixed template order:
+  - topic badge, headline, snippet, key points, attribution block, verification box, credits teaser.
+- Query params:
+  - `auth` (`0`/`1`, optional) to preview logged-out/logged-in credits teaser in staging.
+  - `balance` (optional integer, default `30`) used when `auth=1`.
+- Errors:
+  - `404` story not found
+  - `410` story not publishable/runtime invalid
 
 ## Verification and rewards API
 

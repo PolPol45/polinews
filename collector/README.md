@@ -99,3 +99,35 @@ Default output artifacts:
   - `stories.status`, `stories.publishability_reason`, `stories.keypoints_generated_at`
 - Run logs: `logs/keypoints_runs.log`
 - Reject logs: `logs/keypoints_rejects.log`
+
+---
+
+# Story Page Service (W2-03)
+
+Run local service (FastAPI + HTML rendering):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install fastapi uvicorn httpx playwright
+# Optional for screenshot evidence:
+playwright install chromium
+
+POLINEWS_DB_PATH=data/polinews_smoke.db uvicorn story_service.app:app --reload
+```
+
+Quick checks:
+
+```bash
+curl -sS http://127.0.0.1:8000/health
+curl -sS http://127.0.0.1:8000/stories/<story_id>
+curl -sS "http://127.0.0.1:8000/stories/<story_id>/page?auth=1&balance=30"
+```
+
+Contracts implemented:
+- `GET /stories/{story_id}` -> JSON payload
+- `GET /stories/{story_id}/page` -> HTML page
+
+Error mapping:
+- `404` for missing story
+- `410` for `not_publishable` or runtime minimum violations
