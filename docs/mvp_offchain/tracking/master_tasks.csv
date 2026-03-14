@@ -8,7 +8,7 @@ W1-01,1,Founder,P0,G-01,DONE,D2,Freeze topics taxonomy,8-12 stable slugs,specs/t
 W1-02,1,Freelance,P0,W1-01,DONE,D2,Build feed registry,URL+topic+locale complete,specs/feed_registry_v1.csv
 W1-03,1,Freelance,P0,W1-02,DONE,D2,Define ingestion policy,Refresh+retry+stale defined,specs/ingestion_policy_v1.md
 W1-04,1,Freelance,P0,W1-02,DONE,D3,Implement RSS collector,Raw records persisted,logs+db
-W1-05,1,Freelance,P0,W1-04,NOT_STARTED,D3,Implement normalization,Mandatory fields validated,unit tests
+W1-05,1,Freelance,P0,W1-04,DONE,D3,Implement normalization,Mandatory fields validated,unit tests
 W1-06,1,Freelance,P1,W1-05,NOT_STARTED,D4,Implement canonical URL resolver,>=90 percent sample resolved,qa report
 W1-07,1,Freelance,P0,W1-05,NOT_STARTED,D4,Implement dedup,No high false positive rate,dedup report
 W1-08,1,Founder,P0,W1-02,NOT_STARTED,D4,Define source quality rules,Rules ready for runtime,specs/source_policy_v1.md

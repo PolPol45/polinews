@@ -11,4 +11,5 @@ data/stale_state.json
 data/stale_state_*.json
 logs/*.log
 logs/**/ingestion_*.log
+logs/**/*.log
 docs/mvp_offchain/tracking/github_issues_snapshot.json

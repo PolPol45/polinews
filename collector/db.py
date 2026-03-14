@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,37 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_feed_items_raw_feed_fetched
         ON feed_items_raw(feed_id, fetched_at);
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS stories (
+          story_id TEXT PRIMARY KEY,
+          topic_slug TEXT NOT NULL,
+          headline TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          published_at TIMESTAMP NOT NULL,
+          source_count INTEGER NOT NULL DEFAULT 1,
+          created_at TIMESTAMP NOT NULL
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS story_sources (
+          story_source_id TEXT PRIMARY KEY,
+          story_id TEXT NOT NULL,
+          source_name TEXT NOT NULL,
+          source_url TEXT NOT NULL,
+          publisher_domain TEXT NOT NULL,
+          FOREIGN KEY (story_id) REFERENCES stories(story_id)
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_story_sources_story_id
+        ON story_sources(story_id);
         """
     )
     conn.commit()
@@ -71,3 +103,93 @@ def insert_feed_item_raw(
         ),
     )
 
+
+@dataclass
+class RawFeedItem:
+    raw_id: str
+    feed_id: str
+    fetched_at: str
+    title: str | None
+    snippet: str | None
+    source_name: str | None
+    source_url: str | None
+    published_at: str | None
+    payload_json: str
+
+
+def fetch_feed_items_raw(
+    conn: sqlite3.Connection,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[RawFeedItem]:
+    query = """
+        SELECT
+          raw_id, feed_id, fetched_at, title, snippet, source_name, source_url, published_at, payload_json
+        FROM feed_items_raw
+        ORDER BY fetched_at ASC, raw_id ASC
+    """
+    params: tuple[Any, ...]
+    if limit is None:
+        params = ()
+    else:
+        query += " LIMIT ? OFFSET ?"
+        params = (limit, offset)
+
+    rows = conn.execute(query, params).fetchall()
+    return [
+        RawFeedItem(
+            raw_id=row[0],
+            feed_id=row[1],
+            fetched_at=row[2],
+            title=row[3],
+            snippet=row[4],
+            source_name=row[5],
+            source_url=row[6],
+            published_at=row[7],
+            payload_json=row[8],
+        )
+        for row in rows
+    ]
+
+
+def insert_story(
+    conn: sqlite3.Connection,
+    *,
+    story_id: str,
+    topic_slug: str,
+    headline: str,
+    summary: str,
+    published_at: str,
+    source_count: int,
+    created_at: str,
+) -> bool:
+    cursor = conn.execute(
+        """
+        INSERT OR IGNORE INTO stories (
+          story_id, topic_slug, headline, summary, published_at, source_count, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (story_id, topic_slug, headline, summary, published_at, source_count, created_at),
+    )
+    return cursor.rowcount > 0
+
+
+def insert_story_source(
+    conn: sqlite3.Connection,
+    *,
+    story_source_id: str,
+    story_id: str,
+    source_name: str,
+    source_url: str,
+    publisher_domain: str,
+) -> bool:
+    cursor = conn.execute(
+        """
+        INSERT OR IGNORE INTO story_sources (
+          story_source_id, story_id, source_name, source_url, publisher_domain
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
+        (story_source_id, story_id, source_name, source_url, publisher_domain),
+    )
+    return cursor.rowcount > 0
