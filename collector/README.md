@@ -59,3 +59,43 @@ Default output artifacts:
 - Run logs: `logs/normalization_runs.log`
 - Reject logs: `logs/normalization_rejects.log`
 - Canonical URL modes: `resolved_direct`, `resolved_redirect`, `fallback_source`
+
+---
+
+# Key Points Generator (W2-02)
+
+Local prerequisites (free stack):
+
+```bash
+ollama --version
+ollama pull qwen2.5:3b
+curl -sS http://localhost:11434/api/tags
+```
+
+Run once on non-publishable stories:
+
+```bash
+python3 collector/keypoints_generator.py --run-once --db-path data/polinews.db
+```
+
+Optional overrides:
+
+```bash
+python3 collector/keypoints_generator.py \
+  --run-once \
+  --db-path data/polinews.db \
+  --log-dir logs \
+  --ollama-base-url http://localhost:11434 \
+  --model qwen2.5:3b \
+  --timeout-seconds 25 \
+  --max-retries 2 \
+  --backoff-seconds 1,3 \
+  --max-stories 150
+```
+
+Default output artifacts:
+- SQLite DB writes:
+  - `story_key_points`
+  - `stories.status`, `stories.publishability_reason`, `stories.keypoints_generated_at`
+- Run logs: `logs/keypoints_runs.log`
+- Reject logs: `logs/keypoints_rejects.log`

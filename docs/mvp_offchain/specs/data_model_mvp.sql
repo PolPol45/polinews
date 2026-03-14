@@ -26,7 +26,10 @@ CREATE TABLE IF NOT EXISTS stories (
   summary TEXT NOT NULL,
   published_at TIMESTAMP NOT NULL,
   source_count INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMP NOT NULL
+  created_at TIMESTAMP NOT NULL,
+  status TEXT NOT NULL DEFAULT 'not_publishable',
+  publishability_reason TEXT,
+  keypoints_generated_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS story_sources (
@@ -36,6 +39,16 @@ CREATE TABLE IF NOT EXISTS story_sources (
   source_url TEXT NOT NULL,
   canonical_url TEXT,
   publisher_domain TEXT NOT NULL,
+  FOREIGN KEY (story_id) REFERENCES stories(story_id)
+);
+
+CREATE TABLE IF NOT EXISTS story_key_points (
+  key_point_id TEXT PRIMARY KEY,
+  story_id TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  UNIQUE (story_id, position),
   FOREIGN KEY (story_id) REFERENCES stories(story_id)
 );
 
@@ -106,6 +119,7 @@ CREATE TABLE IF NOT EXISTS fraud_signals (
 CREATE INDEX IF NOT EXISTS idx_attempts_user_story ON attempts(user_id, story_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_user_created ON rewards_ledger(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_fraud_status_severity ON fraud_signals(status, severity);
+CREATE INDEX IF NOT EXISTS idx_story_key_points_story_position ON story_key_points(story_id, position);
 
 -- v0.2 data monetization layer
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -46,7 +47,10 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
           summary TEXT NOT NULL,
           published_at TIMESTAMP NOT NULL,
           source_count INTEGER NOT NULL DEFAULT 1,
-          created_at TIMESTAMP NOT NULL
+          created_at TIMESTAMP NOT NULL,
+          status TEXT NOT NULL DEFAULT 'not_publishable',
+          publishability_reason TEXT,
+          keypoints_generated_at TIMESTAMP
         );
         """
     )
@@ -69,7 +73,27 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ON story_sources(story_id);
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS story_key_points (
+          key_point_id TEXT PRIMARY KEY,
+          story_id TEXT NOT NULL,
+          position INTEGER NOT NULL,
+          text TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL,
+          UNIQUE(story_id, position),
+          FOREIGN KEY (story_id) REFERENCES stories(story_id)
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_story_key_points_story_id
+        ON story_key_points(story_id, position);
+        """
+    )
     _ensure_story_sources_canonical_column(conn)
+    _ensure_stories_publishability_columns(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS dedup_registry (
@@ -175,15 +199,39 @@ def insert_story(
     published_at: str,
     source_count: int,
     created_at: str,
+    status: str = "not_publishable",
+    publishability_reason: str | None = None,
+    keypoints_generated_at: str | None = None,
 ) -> bool:
     cursor = conn.execute(
         """
         INSERT OR IGNORE INTO stories (
-          story_id, topic_slug, headline, summary, published_at, source_count, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          story_id, topic_slug, headline, summary, published_at, source_count, created_at,
+          status, publishability_reason, keypoints_generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (story_id, topic_slug, headline, summary, published_at, source_count, created_at),
+        (
+            story_id,
+            topic_slug,
+            headline,
+            summary,
+            published_at,
+            source_count,
+            created_at,
+            status,
+            publishability_reason,
+            keypoints_generated_at,
+        ),
     )
+    if cursor.rowcount == 0 and publishability_reason:
+        conn.execute(
+            """
+            UPDATE stories
+            SET publishability_reason = COALESCE(publishability_reason, ?)
+            WHERE story_id = ?
+            """,
+            (publishability_reason, story_id),
+        )
     return cursor.rowcount > 0
 
 
@@ -246,7 +294,110 @@ def insert_dedup_registry(
     return cursor.rowcount > 0
 
 
+def fetch_keypoint_candidates(conn: sqlite3.Connection, *, limit: int) -> list[dict[str, str]]:
+    rows = conn.execute(
+        """
+        SELECT s.story_id, s.headline, s.summary, s.topic_slug
+        FROM stories s
+        LEFT JOIN (
+          SELECT story_id, COUNT(*) AS kp_count
+          FROM story_key_points
+          GROUP BY story_id
+        ) kp ON kp.story_id = s.story_id
+        WHERE s.status != 'publishable' OR COALESCE(kp.kp_count, 0) < 3
+        ORDER BY s.created_at ASC, s.story_id ASC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return [
+        {
+            "story_id": row[0],
+            "headline": row[1],
+            "summary": row[2],
+            "topic_slug": row[3],
+        }
+        for row in rows
+    ]
+
+
+def fetch_story_source_links(conn: sqlite3.Connection, *, story_id: str) -> list[tuple[str, str]]:
+    rows = conn.execute(
+        """
+        SELECT source_name, COALESCE(canonical_url, source_url)
+        FROM story_sources
+        WHERE story_id = ?
+        ORDER BY source_name ASC
+        """,
+        (story_id,),
+    ).fetchall()
+    links: list[tuple[str, str]] = []
+    for source_name, source_url in rows:
+        if not source_name or not source_url:
+            continue
+        links.append((str(source_name), str(source_url)))
+    return links
+
+
+def replace_story_key_points(
+    conn: sqlite3.Connection,
+    *,
+    story_id: str,
+    key_points: Sequence[str],
+    created_at: str,
+) -> None:
+    conn.execute("DELETE FROM story_key_points WHERE story_id = ?", (story_id,))
+    for idx, text in enumerate(key_points, start=1):
+        key_point_id = f"{story_id}_kp_{idx}"
+        conn.execute(
+            """
+            INSERT INTO story_key_points (
+              key_point_id, story_id, position, text, created_at
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (key_point_id, story_id, idx, text, created_at),
+        )
+
+
+def update_story_publishability(
+    conn: sqlite3.Connection,
+    *,
+    story_id: str,
+    status: str,
+    publishability_reason: str | None,
+    keypoints_generated_at: str | None,
+) -> None:
+    conn.execute(
+        """
+        UPDATE stories
+        SET status = ?,
+            publishability_reason = ?,
+            keypoints_generated_at = ?
+        WHERE story_id = ?
+        """,
+        (status, publishability_reason, keypoints_generated_at, story_id),
+    )
+
+
+def count_story_key_points(conn: sqlite3.Connection, *, story_id: str) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) FROM story_key_points WHERE story_id = ?",
+        (story_id,),
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
 def _ensure_story_sources_canonical_column(conn: sqlite3.Connection) -> None:
     columns = [row[1] for row in conn.execute("PRAGMA table_info(story_sources)").fetchall()]
     if "canonical_url" not in columns:
         conn.execute("ALTER TABLE story_sources ADD COLUMN canonical_url TEXT")
+
+
+def _ensure_stories_publishability_columns(conn: sqlite3.Connection) -> None:
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(stories)").fetchall()]
+    if "status" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN status TEXT NOT NULL DEFAULT 'not_publishable'")
+    if "publishability_reason" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN publishability_reason TEXT")
+    if "keypoints_generated_at" not in columns:
+        conn.execute("ALTER TABLE stories ADD COLUMN keypoints_generated_at TIMESTAMP")

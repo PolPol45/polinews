@@ -274,6 +274,9 @@ def normalize_item(
             "published_at": published_at,
             "source_count": 1,
             "created_at": normalization_ts,
+            "status": "not_publishable",
+            "publishability_reason": "missing_key_points",
+            "keypoints_generated_at": None,
         },
         "story_source": {
             "story_source_id": story_source_id,

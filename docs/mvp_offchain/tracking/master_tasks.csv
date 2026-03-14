@@ -17,7 +17,7 @@ W1-10,1,Freelance,P1,W1-03,DONE,D5,Define stale fallback,Feeds can fail without 
 W1-11,1,Founder,P0,W1-08,DONE,D5,Define attribution legal policy,Policy approved,specs/attribution_policy_v1.md
 W1-12,1,Founder,P0,W1-01..W1-11,DONE,D7,Week 1 checkpoint,Ingestion stable/checkpoint signed,tracking/checkpoints.md
 W2-01,2,Founder,P0,W1-12,DONE,D8,Define story template,Template approved,specs/story_template_v1.md
-W2-02,2,Freelance,P0,W2-01,NOT_STARTED,D9,Implement key-point generation,3-5 key points per story,qa sample
+W2-02,2,Freelance,P0,W2-01,BLOCKED,D9,Implement key-point generation,3-5 key points per story,tracking/w2_02_keypoints_qa_report.md
 W2-03,2,Freelance,P0,W2-01,NOT_STARTED,D9,Implement story rendering,Source attribution complete,staging urls
 W2-04,2,Founder,P0,W2-01,NOT_STARTED,D9,Define quiz format,Spec approved,specs/quiz_spec_v1.md
 W2-05,2,Freelance,P0,W2-04,NOT_STARTED,D10,Implement quiz pool generation,Pool for >=80 percent stories,coverage report
