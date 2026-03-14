@@ -50,3 +50,43 @@
   - `quality`: `avg_quiz_time`, `comment_accept_rate`
   - `economics`: `credits_issued`, `credits_revoked`, `verified_read_cost`
   - `fraud`: `signals_open`, `signals_high_severity`
+
+## Analytics API (v0.2)
+
+### `GET /analytics/story/:story_id`
+- 200:
+  - `comprehension_score`, `engagement_score`, `reading_time_p50`, `difficulty_index`
+- Auth: publisher API key.
+
+### `GET /analytics/topic/:topic_slug?locale=&from=&to=`
+- 200:
+  - weekly `attempt_rate`, `comprehension_score`, `avg_read_seconds`, `unique_readers`
+- Auth: publisher or researcher API key.
+
+### `GET /analytics/publisher/benchmark`
+- 200:
+  - publisher metrics vs platform median by topic and locale.
+- Auth: publisher API key.
+
+### `GET /analytics/export?format=parquet&from=&to=`
+- 200:
+  - signed URL or streamed dataset export.
+- Auth: licensed researcher API key.
+
+## Phase 2 Voucher API (readiness)
+
+### `POST /voucher/issue`
+- Request: `user_id`, `user_address`, `story_id`, `amount_poli`.
+- 200: `voucher_payload`, `server_signature`, `expiry`, `nonce`.
+- Auth: internal service key.
+
+### `GET /voucher/status/:nonce`
+- 200: `status` (`issued` | `claimed` | `expired`), `claimed_tx_hash`.
+- Auth: internal service key.
+
+## Compliance API
+
+### `DELETE /user/data`
+- Purpose: GDPR deletion request for reading history and export-ready derived data.
+- 202: accepted with async job id.
+- Auth: user session token.

@@ -6,8 +6,8 @@ G-04,0,Freelance,P1,G-01,DONE,D1,Define env naming,Used across docs/logs,governa
 G-05,0,Founder,P1,G-01,DONE,D1,Define issue templates,4 templates available,governance/issue_templates.md
 W1-01,1,Founder,P0,G-01,DONE,D2,Freeze topics taxonomy,8-12 stable slugs,specs/topics_v1.md
 W1-02,1,Freelance,P0,W1-01,DONE,D2,Build feed registry,URL+topic+locale complete,specs/feed_registry_v1.csv
-W1-03,1,Freelance,P0,W1-02,NOT_STARTED,D2,Define ingestion policy,Refresh+retry+stale defined,specs/ingestion_policy_v1.md
-W1-04,1,Freelance,P0,W1-02,NOT_STARTED,D3,Implement RSS collector,Raw records persisted,logs+db
+W1-03,1,Freelance,P0,W1-02,DONE,D2,Define ingestion policy,Refresh+retry+stale defined,specs/ingestion_policy_v1.md
+W1-04,1,Freelance,P0,W1-02,DONE,D3,Implement RSS collector,Raw records persisted,logs+db
 W1-05,1,Freelance,P0,W1-04,NOT_STARTED,D3,Implement normalization,Mandatory fields validated,unit tests
 W1-06,1,Freelance,P1,W1-05,NOT_STARTED,D4,Implement canonical URL resolver,>=90 percent sample resolved,qa report
 W1-07,1,Freelance,P0,W1-05,NOT_STARTED,D4,Implement dedup,No high false positive rate,dedup report
@@ -51,3 +51,16 @@ W4-07,4,Founder,P0,W4-06,NOT_STARTED,D26-D27,Full pilot run,Stable run and daily
 W4-08,4,Founder,P0,W4-07,NOT_STARTED,D28,Compute final KPIs and evaluate gates,Decision memo created,tracking/decision_memo.md
 W4-09,4,Founder,P1,W4-08,NOT_STARTED,D28,Postmortem and backlog v2,Top 10 prioritized actions,tracking/backlog_v2.md
 W4-10,4,Founder,P0,W4-08,NOT_STARTED,D28,Formal closeout,All mandatory checks signed,tracking/checkpoints.md
+W2-14,2,Freelance,P0,W1-09,NOT_STARTED,D14,Extend SQL schema for data revenue layer,New tables ready in data_model_mvp.sql,specs/data_model_mvp.sql
+W2-15,2,Freelance,P0,W2-04,NOT_STARTED,D14,Add quiz question task types and campaign fields,quiz_questions spec updated,specs/data_model_mvp.sql
+W2-16,2,Founder,P0,W2-14,NOT_STARTED,D14,Define pseudonymization and DPA export policy,Policy doc approved,specs/compliance_data_policy_v1.md
+W2-17,2,Freelance,P0,W2-10,NOT_STARTED,D14,Extend API contract with analytics and voucher endpoints,api_contract includes analytics plus voucher,specs/api_contract_mvp.md
+W3-13,3,Freelance,P0,W2-14,NOT_STARTED,D21,Implement reading sessions capture,reading_sessions rows created,db sample
+W3-14,3,Freelance,P0,W2-14,NOT_STARTED,D21,Implement comprehension events and qa pair writes,comprehension_events and qa_pairs populated,db sample
+W3-15,3,Freelance,P0,W2-15,NOT_STARTED,D21,Implement annotation task model and injection rules,annotation_tasks table and logic active,db plus test cases
+W3-16,3,Freelance,P1,W3-14,NOT_STARTED,D21,Build dataset export sample parquet,first private dataset export generated,data export sample
+W4-11,4,Founder,P0,W3-16,NOT_STARTED,D28,Add data monetization KPIs and alerts,kpi_spec updated with new KPIs,specs/kpi_spec_v1.md
+W4-12,4,Founder,P1,W3-16,NOT_STARTED,D28,Prepare AI buyer integration pack,buyer list plus contract checklist,tracking/backlog_v2.md
+W4-13,4,Freelance,P1,W2-17,NOT_STARTED,D28,Define phase2 blockchain contracts and voucher flow,phase2 architecture documented,docs/phase2_blockchain_architecture.md
+W4-14,4,Founder,P0,W2-16,NOT_STARTED,D28,Finalize GDPR and MiCA readiness checklist,compliance checklist and delete user data requirement,specs/compliance_data_policy_v1.md
+W4-15,4,Founder,P0,W4-08+W4-11+W4-14,NOT_STARTED,D28,Week4 v0.2 decision checkpoint,go conditional go no go with data revenue view,tracking/decision_memo.md

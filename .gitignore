@@ -1,2 +1,14 @@
 .DS_Store
 ~$*.docx
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/stale_state.json
+data/stale_state_*.json
+logs/*.log
+logs/**/ingestion_*.log
+docs/mvp_offchain/tracking/github_issues_snapshot.json

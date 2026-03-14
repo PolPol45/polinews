@@ -16,4 +16,13 @@ This folder contains the operational implementation pack for the 4-week off-chai
 4. Start tasks `G-01` to `G-05`.
 
 ## Control rule
-`MASTER_CHECKLIST.md` is the source of truth for status and sign-off.
+Source of truth for status and sign-off:
+- `tracking/master_tasks.csv`
+- `tracking/KANBAN_BOARD.md`
+- `tracking/checkpoints.md`
+
+## Maintenance commands (repo root)
+- Validate tracking consistency:
+  - `python3 scripts/validate_tracking.py`
+- Sync GitHub issues snapshot (public API):
+  - `scripts/sync_github_issues.sh PolPol45/polinews open`

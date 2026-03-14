@@ -17,3 +17,8 @@ Policy version: `2026-03-05-v1`
 - Allowed reasons: fraud, duplicate reward, policy violation.
 - Revoke writes a negative ledger entry with reason code.
 - Revoke cannot delete prior ledger entries.
+
+## Phase 2 token readiness
+- Off-chain credits remain the only MVP payout mechanism.
+- In Phase 2, users can convert eligible credits to signed vouchers for `$POLI` claim.
+- Voucher claims require nonce anti-replay and expiry checks.

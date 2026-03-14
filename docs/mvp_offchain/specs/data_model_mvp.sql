@@ -98,3 +98,108 @@ CREATE TABLE IF NOT EXISTS fraud_signals (
 CREATE INDEX IF NOT EXISTS idx_attempts_user_story ON attempts(user_id, story_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_user_created ON rewards_ledger(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_fraud_status_severity ON fraud_signals(status, severity);
+
+-- v0.2 data monetization layer
+
+CREATE TABLE IF NOT EXISTS quiz_questions (
+  question_id TEXT PRIMARY KEY,
+  quiz_id TEXT NOT NULL,
+  question_text TEXT NOT NULL,
+  task_type TEXT NOT NULL DEFAULT 'comprehension',
+  annotation_campaign_id TEXT,
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
+);
+
+CREATE TABLE IF NOT EXISTS reading_sessions (
+  session_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  story_id TEXT NOT NULL,
+  topic_slug TEXT NOT NULL,
+  started_at TIMESTAMP NOT NULL,
+  scroll_depth INTEGER,
+  active_seconds INTEGER,
+  total_seconds INTEGER,
+  device_type TEXT,
+  locale TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(user_id),
+  FOREIGN KEY (story_id) REFERENCES stories(story_id)
+);
+
+CREATE TABLE IF NOT EXISTS quiz_qa_pairs (
+  pair_id TEXT PRIMARY KEY,
+  story_id TEXT NOT NULL,
+  quiz_id TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  question_text TEXT NOT NULL,
+  correct_answer TEXT NOT NULL,
+  distractor_a TEXT NOT NULL,
+  distractor_b TEXT NOT NULL,
+  topic_slug TEXT NOT NULL,
+  difficulty INTEGER,
+  avg_human_score FLOAT,
+  attempt_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY (story_id) REFERENCES stories(story_id),
+  FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id),
+  FOREIGN KEY (question_id) REFERENCES quiz_questions(question_id)
+);
+
+CREATE TABLE IF NOT EXISTS comprehension_events (
+  event_id TEXT PRIMARY KEY,
+  attempt_id TEXT NOT NULL,
+  session_id TEXT,
+  question_id TEXT NOT NULL,
+  chosen_option_id TEXT NOT NULL,
+  is_correct BOOLEAN NOT NULL,
+  elapsed_ms INTEGER NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id),
+  FOREIGN KEY (session_id) REFERENCES reading_sessions(session_id),
+  FOREIGN KEY (question_id) REFERENCES quiz_questions(question_id)
+);
+
+CREATE TABLE IF NOT EXISTS annotation_tasks (
+  task_id TEXT PRIMARY KEY,
+  campaign_id TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  task_type TEXT NOT NULL,
+  buyer_org TEXT,
+  payout_per_label NUMERIC(10, 4),
+  min_labels INTEGER DEFAULT 5,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMP NOT NULL,
+  FOREIGN KEY (question_id) REFERENCES quiz_questions(question_id)
+);
+
+CREATE TABLE IF NOT EXISTS story_analytics (
+  analytics_id TEXT PRIMARY KEY,
+  story_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  box_viewed INTEGER DEFAULT 0,
+  quiz_started INTEGER DEFAULT 0,
+  quiz_passed INTEGER DEFAULT 0,
+  comment_submitted INTEGER DEFAULT 0,
+  comment_accepted INTEGER DEFAULT 0,
+  avg_active_seconds FLOAT,
+  avg_scroll_depth FLOAT,
+  comprehension_score FLOAT,
+  engagement_score FLOAT,
+  UNIQUE (story_id, date),
+  FOREIGN KEY (story_id) REFERENCES stories(story_id)
+);
+
+CREATE TABLE IF NOT EXISTS topic_interest_weekly (
+  week_start DATE NOT NULL,
+  topic_slug TEXT NOT NULL,
+  locale TEXT NOT NULL,
+  attempt_rate FLOAT,
+  comprehension_score FLOAT,
+  avg_read_seconds FLOAT,
+  unique_readers INTEGER,
+  PRIMARY KEY (week_start, topic_slug, locale)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reading_sessions_story ON reading_sessions(story_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_qa_pairs_topic ON quiz_qa_pairs(topic_slug, created_at);
+CREATE INDEX IF NOT EXISTS idx_story_analytics_date ON story_analytics(date, story_id);
