@@ -68,6 +68,16 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ON story_sources(story_id);
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dedup_registry (
+          dedup_key TEXT PRIMARY KEY,
+          story_id TEXT NOT NULL,
+          raw_id TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL
+        );
+        """
+    )
     conn.commit()
 
 
@@ -191,5 +201,32 @@ def insert_story_source(
         ) VALUES (?, ?, ?, ?, ?)
         """,
         (story_source_id, story_id, source_name, source_url, publisher_domain),
+    )
+    return cursor.rowcount > 0
+
+
+def dedup_key_exists(conn: sqlite3.Connection, *, dedup_key: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM dedup_registry WHERE dedup_key = ? LIMIT 1",
+        (dedup_key,),
+    ).fetchone()
+    return row is not None
+
+
+def insert_dedup_registry(
+    conn: sqlite3.Connection,
+    *,
+    dedup_key: str,
+    story_id: str,
+    raw_id: str,
+    created_at: str,
+) -> bool:
+    cursor = conn.execute(
+        """
+        INSERT OR IGNORE INTO dedup_registry (
+          dedup_key, story_id, raw_id, created_at
+        ) VALUES (?, ?, ?, ?)
+        """,
+        (dedup_key, story_id, raw_id, created_at),
     )
     return cursor.rowcount > 0

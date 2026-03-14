@@ -19,14 +19,18 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from collector.config import DEFAULT_DB_PATH, DEFAULT_FEEDS_CSV, DEFAULT_LOG_DIR
+from collector.config import DEDUP_WINDOW_HOURS
 from collector.db import (
     RawFeedItem,
     connect_db,
+    dedup_key_exists,
     ensure_schema,
     fetch_feed_items_raw,
+    insert_dedup_registry,
     insert_story,
     insert_story_source,
 )
+from collector.dedup import DEDUP_REASON_CODE, build_dedup_key, build_title_fingerprint
 
 DEFAULT_TOPICS_FILE = Path("docs/mvp_offchain/specs/topics_v1.md")
 
@@ -208,9 +212,13 @@ class NormalizerLogger:
         processed: int,
         accepted: int,
         rejected: int,
+        duplicates_count: int,
         error_class: str,
     ) -> None:
-        line = f"{run_id},{start_ts},{end_ts},{processed},{accepted},{rejected},{error_class}"
+        line = (
+            f"{run_id},{start_ts},{end_ts},{processed},{accepted},{rejected},"
+            f"{duplicates_count},{error_class}"
+        )
         self._append(self.run_log_path, line)
         print(f"[NORMALIZE_RUN] {line}")
 
@@ -289,7 +297,13 @@ def normalize_item(
     return normalized, None
 
 
-def run_once(db_path: Path, feeds_csv: Path, topics_file: Path, log_dir: Path) -> int:
+def run_once(
+    db_path: Path,
+    feeds_csv: Path,
+    topics_file: Path,
+    log_dir: Path,
+    dedup_window_hours: int,
+) -> int:
     if not db_path.exists():
         raise RuntimeError(f"db_not_found: {db_path}")
     if not feeds_csv.exists():
@@ -311,6 +325,7 @@ def run_once(db_path: Path, feeds_csv: Path, topics_file: Path, log_dir: Path) -
     processed = 0
     accepted = 0
     rejected = 0
+    duplicates_count = 0
     error_class = ""
     normalization_ts = utc_now_iso()
 
@@ -336,9 +351,36 @@ def run_once(db_path: Path, feeds_csv: Path, topics_file: Path, log_dir: Path) -
 
             story = normalized["story"]
             story_source = normalized["story_source"]
+            title_fingerprint = build_title_fingerprint(story["headline"])
+            dedup_key = build_dedup_key(
+                title_fingerprint=title_fingerprint,
+                publisher_domain=story_source["publisher_domain"],
+                url_normalized=story_source["source_url"],
+                published_at_iso=story["published_at"],
+                window_hours=dedup_window_hours,
+            )
+
+            if dedup_key_exists(conn, dedup_key=dedup_key):
+                duplicates_count += 1
+                rejected += 1
+                logger.log_reject(
+                    run_id=run_id,
+                    raw_id=item.raw_id,
+                    feed_id=item.feed_id,
+                    reason_code=DEDUP_REASON_CODE,
+                    reject_ts=utc_now_iso(),
+                )
+                continue
 
             insert_story(conn, **story)
             insert_story_source(conn, **story_source)
+            insert_dedup_registry(
+                conn,
+                dedup_key=dedup_key,
+                story_id=story["story_id"],
+                raw_id=item.raw_id,
+                created_at=normalization_ts,
+            )
             accepted += 1
 
         conn.commit()
@@ -355,11 +397,16 @@ def run_once(db_path: Path, feeds_csv: Path, topics_file: Path, log_dir: Path) -
             processed=processed,
             accepted=accepted,
             rejected=rejected,
+            duplicates_count=duplicates_count,
             error_class=error_class,
         )
         conn.close()
 
-    print(f"[NORMALIZE_SUMMARY] run_id={run_id} processed={processed} accepted={accepted} rejected={rejected}")
+    print(
+        "[NORMALIZE_SUMMARY] "
+        f"run_id={run_id} processed={processed} accepted={accepted} "
+        f"rejected={rejected} duplicates={duplicates_count}"
+    )
     return 0
 
 
@@ -370,6 +417,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--feeds-csv", type=Path, default=DEFAULT_FEEDS_CSV)
     parser.add_argument("--topics-file", type=Path, default=DEFAULT_TOPICS_FILE)
     parser.add_argument("--log-dir", type=Path, default=DEFAULT_LOG_DIR)
+    parser.add_argument("--dedup-window-hours", type=int, default=DEDUP_WINDOW_HOURS)
     return parser.parse_args()
 
 
@@ -385,6 +433,7 @@ def main() -> int:
             feeds_csv=args.feeds_csv,
             topics_file=args.topics_file,
             log_dir=args.log_dir,
+            dedup_window_hours=args.dedup_window_hours,
         )
     except Exception as exc:  # noqa: BLE001
         print(f"[NORMALIZE_ERROR] {exc}", file=sys.stderr)

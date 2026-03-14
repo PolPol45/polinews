@@ -38,6 +38,13 @@ CREATE TABLE IF NOT EXISTS story_sources (
   FOREIGN KEY (story_id) REFERENCES stories(story_id)
 );
 
+CREATE TABLE IF NOT EXISTS dedup_registry (
+  dedup_key TEXT PRIMARY KEY,
+  story_id TEXT NOT NULL,
+  raw_id TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS quizzes (
   quiz_id TEXT PRIMARY KEY,
   story_id TEXT NOT NULL,

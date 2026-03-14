@@ -45,7 +45,8 @@ python3 collector/normalizer.py \
   --db-path data/polinews.db \
   --feeds-csv docs/mvp_offchain/specs/feed_registry_v1.csv \
   --topics-file docs/mvp_offchain/specs/topics_v1.md \
-  --log-dir logs
+  --log-dir logs \
+  --dedup-window-hours 24
 ```
 
 Default output artifacts:

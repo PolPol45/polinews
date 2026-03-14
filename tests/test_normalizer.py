@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from collector.normalizer import (
+    NormalizerLogger,
     clean_text,
     deterministic_story_id,
     deterministic_story_source_id,
@@ -89,6 +90,22 @@ class TestNormalizerUtils(unittest.TestCase):
 
             self.assertEqual(topics, {"politics"})
             self.assertEqual(feed_map["feed_politics_us"], "politics")
+
+    def test_run_log_includes_duplicates_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            logger = NormalizerLogger(Path(tmpdir))
+            logger.log_run(
+                run_id="r1",
+                start_ts="2026-03-14T00:00:00+00:00",
+                end_ts="2026-03-14T00:01:00+00:00",
+                processed=10,
+                accepted=7,
+                rejected=3,
+                duplicates_count=2,
+                error_class="",
+            )
+            line = (Path(tmpdir) / "normalization_runs.log").read_text(encoding="utf-8").strip()
+            self.assertEqual(line, "r1,2026-03-14T00:00:00+00:00,2026-03-14T00:01:00+00:00,10,7,3,2,")
 
 
 if __name__ == "__main__":
