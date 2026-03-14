@@ -1,283 +1,229 @@
-# Poli-News Whitepaper
+# Poli-News
 
-**Title:** Poli-News - Proof-of-Reading Incentive Layer for digital publishers  
-**Version:** v0.1 (MVP Whitepaper)  
-**Date:** March 5, 2026  
-**Document:** General idea + MVP (2-4 weeks)
+**Version:** v0.2 — MVP Off-Chain + Blockchain Revenue Model  
+**Date:** 2026-03-14  
+**Status:** Week 1 in progress — governance complete, feed registry frozen, ingestion pipeline pending
 
----
-
-## 1. Cover + One-liner
-
-Poli-News is an application layer that turns passive reading into verifiable interaction: instead of paying for clicks or low-quality impressions, the publisher incentivizes high-value behavior (content understanding and useful comments) through off-chain digital credits that are controllable and revocable.
-
-**One-liner:** *"Poli-News is the Proof-of-Reading Incentive Layer that converts editorial attention into measurable engagement, with sustainable rewards and pragmatic anti-fraud."*
-
-The project starts with a lean initial phase: no wallet dependency, no KYC dependency, and no blockchain complexity in the MVP production flow. The goal is not to experiment with technology for its own sake, but to improve real editorial metrics quickly.
-
-**Implication for Publisher:** the publisher can test a new engagement engine in 1 month without changing the core stack, without introducing legal/crypto complexity, and with limited operational risk.
+> *Poli-News is a Proof-of-Reading Incentive Layer that converts verified editorial attention into measurable engagement, sustainable token rewards, and licensable AI training data.*
 
 ---
 
-## 2. Executive Summary (IT)
+## Table of Contents
 
-### Problem
-In digital publishing, a large share of traffic stops at the click: shallow reading time, low-quality comment interaction, weak user return, and difficulty distinguishing authentic attention from noisy signals. Classic metrics (pageviews, CTR) are necessary but not sufficient to drive long-term product and monetization decisions.
-
-### Poli-News solution
-Poli-News introduces a lightweight verification mechanism, integrated at the end of an article or after 60-80% scroll depth, offering users two paths:
-1. Reading-comprehension quiz (2-3 questions randomized from an article pool).
-2. Quality comment (minimum length + anti-spam heuristics).
-
-If verification is passed, the user receives credits in an off-chain ledger. Credits are then redeemed for low-friction editorial rewards (for example, subscription discount or temporary premium access). The logic is simple: reward useful attention signals, not just traffic volume.
-
-### What validates the MVP
-In 2-4 weeks, Poli-News aims to prove four points:
-1. Users complete verification without excessive drop-off.
-2. The publisher sees measurable engagement uplift (read completion, return rate, quality interaction).
-3. Farming is manageable with baseline rules, reputation, and semi-automatic review.
-4. Unit economics are sound between reward cost and generated value.
-
-### Operational scope
-The pilot is intentionally narrow:
-- 1 publisher.
-- 20-50 participating articles.
-- 1 month of observation.
-- 1-2 active reward options.
-- Minimal dashboard with conversion/fraud KPIs.
-
-### Guiding KPIs (go/no-go)
-- Quiz attempt rate among users who see the box: 15-25% target.
-- Quiz pass rate: 60-80% target.
-- Average quiz completion time: 20-60 seconds.
-- Cost per verified read: below publisher-defined economic threshold.
-- Fraud flag rate: in a controllable range with operational intervention.
-
-### Blockchain positioning
-Blockchain is not an MVP prerequisite. It enters only in Phase 2, once UX and anti-fraud are validated, to manage transparent redemption and anti-double-spend through server-signed vouchers and on-chain recording of final redemption.
-
-**Implication for Publisher:** Poli-News provides a measurable, gradual path: first validate editorial value, then harden infrastructure if needed.
+1. [What Poli-News Is](#1-what-poli-news-is)
+2. [Repository State (as of 2026-03-14)](#2-repository-state-as-of-2026-03-14)
+3. [System Architecture](#3-system-architecture)
+4. [MVP Off-Chain Layer](#4-mvp-off-chain-layer)
+5. [Blockchain Layer (Phase 2)](#5-blockchain-layer-phase-2)
+6. [Revenue Streams](#6-revenue-streams)
+   - 6.1 [Publisher Subscription (Core)](#61-publisher-subscription-core)
+   - 6.2 [AI Training Data Licensing](#62-ai-training-data-licensing)
+   - 6.3 [Human Verification Tasks (RLHF Data Sales)](#63-human-verification-tasks-rlhf-data-sales)
+   - 6.4 [Verified Attention Analytics](#64-verified-attention-analytics)
+7. [Token Economics ($POLI)](#7-token-economics-poli)
+8. [Data Model](#8-data-model)
+9. [API Reference](#9-api-reference)
+10. [Feed Registry](#10-feed-registry)
+11. [Anti-Fraud System](#11-anti-fraud-system)
+12. [KPI Framework](#12-kpi-framework)
+13. [Pilot Plan & Decision Gates](#13-pilot-plan--decision-gates)
+14. [Tech Stack & Provider Reference](#14-tech-stack--provider-reference)
+15. [Compliance Notes](#15-compliance-notes)
 
 ---
 
-## 3. Executive Summary (EN)
+## 1. What Poli-News Is
 
-Poli-News is a lightweight Proof-of-Reading Incentive Layer designed for digital publishers that need better post-click engagement, not more vanity traffic. The core assumption is simple: most content monetization models reward clicks, while publisher value is generated by meaningful reading, informed participation, and repeat visits.
+Poli-News is an application layer that sits on top of any digital publisher and turns passive reading into three monetizable outputs:
 
-### The challenge
-Publishers can attract visits but still struggle with shallow reading depth, low-quality comments, weak retention, and noisy engagement signals. Traditional metrics like pageviews and CTR do not capture whether users actually understand and interact with the content.
+1. **Verified reads** — users prove they understood an article by passing a short quiz. The publisher pays for this signal because it is qualitatively different from a pageview.
+2. **Behavioral datasets** — reading time, comprehension scores, quiz answer pairs, and topic interest signals are structured and licensed as AI training data.
+3. **Human annotation tasks** — some quiz questions double as micro-annotation tasks (misinformation detection, summary validation, sentiment labeling) sold to AI labs.
 
-### The Poli-News approach
-Poli-News adds an in-article verification box, typically at the end of the article or after 60-80% scroll depth. Users can unlock rewards through either:
-1. A short comprehension quiz (2-3 questions from an article-specific question pool).
-2. A quality comment flow (minimum length + anti-spam heuristics).
+The user is rewarded with `$POLI`, an ERC-20 utility token backed by a protocol treasury funded by publishers and advertisers.
 
-Successful verification grants off-chain credits in a publisher-controlled reward ledger. Credits can be redeemed through practical editorial benefits, such as subscription discounts or temporary premium access. This model aligns incentives with verified attention rather than raw volume.
+**The core loop:**
 
-### What the MVP must prove in 2-4 weeks
-1. Users complete verification with acceptable friction.
-2. Publishers see measurable uplift in high-value engagement.
-3. Basic anti-farming controls are operationally manageable.
-4. Unit economics are defensible (verified-read cost vs business value).
+```
+Publisher pays USDC into treasury
+    → Reader reads article
+    → Reader passes quiz (20–60 seconds)
+    → Backend issues signed voucher
+    → Reader claims $POLI on-chain
+    → Treasury receives more USDC from data licensing and analytics
+    → Token value is supported by real cashflows
+```
 
-### MVP boundaries
-The pilot remains intentionally constrained:
-- One publisher.
-- 20-50 articles.
-- One-month observation window.
-- One or two redemption options.
-- Basic dashboard for conversion, reward spend, and fraud alerts.
-
-### Decision metrics
-- Attempt rate among box viewers: 15-25% target.
-- Pass rate: 60-80% target.
-- Average completion time: 20-60 seconds.
-- Cost per verified read: within publisher-defined threshold.
-- Fraud signals: manageable through rules and manual review.
-
-### Why blockchain is Phase 2
-The MVP does not require wallets, KYC, or on-chain write paths. Blockchain is introduced only after product validation to improve transparency and anti-double-spend guarantees through server-signed vouchers and on-chain redemption records.
-
-**Implication for Publisher:** Poli-News provides a low-risk pilot path focused on measurable editorial outcomes first, infrastructure complexity later.
+No wallets required in the MVP. No KYC. No blockchain complexity for the pilot publisher. Phase 2 introduces on-chain claiming once the off-chain loop is validated.
 
 ---
 
-## 4. Problem & Market Context
+## 2. Repository State (as of 2026-03-14)
 
-### Current state: incomplete engagement
-Many publishing sites have optimized acquisition funnels, but still lack robust tools to convert traffic into verified reading. The result is a gap between operational metrics and real value:
-- High `Pageviews` do not imply content understanding.
-- `Time on page` can be noisy or unreliable.
-- `Comments` are often polarized, short, or spam-oriented.
-- `User return` is sensitive to external promotion and not always tied to editorial quality.
+### Completed
 
-### Why now
-Editorial teams need actionable metrics that connect product, monetization, and loyalty. In this context, a readable and lightweight verification mechanism creates a new unit of measure: the "verified read." This unit enables:
-- article comparison on a quality basis;
-- reward budget allocation based on real performance;
-- integration with subscription and premium-access strategies.
+| ID | Task | Evidence |
+|----|------|----------|
+| G-01 | Board created (Backlog / In Progress / Blocked / Done) | `tracking/KANBAN_BOARD.md` |
+| G-03 | SLA defined (Critical <24h, High <48h) | `governance/sla_mvp.md` |
+| G-04 | Environment naming (`dev / staging / pilot`) | `governance/env_naming.md` |
+| G-05 | Issue templates (Bug / Feature / Fraud / Ops) | `governance/issue_templates.md` |
+| W1-01 | Topic taxonomy frozen (10 topics, slug rules validated) | `specs/topics_v1.md` |
+| W1-02 | Feed registry built and frozen (30 feeds, US/UK/IT) | `specs/feed_registry_v1.csv` |
 
-### Gaps in alternatives
-- Hard paywall: effective for direct conversion, weaker for pre-subscription engagement.
-- Generic gamification: risk of misaligned incentives if not tied to content.
-- Fully manual moderation: expensive and not scalable at higher volume.
+### Specs written and ready (tasks not yet formally closed)
 
-Poli-News combines contextual verification + controlled rewards + anti-fraud with an adoption path that starts from JS integration and standard backend APIs.
+| Spec file | Content |
+|-----------|---------|
+| `specs/ingestion_policy_v1.md` | 15-min refresh, 8s timeout, 3 retries, stale mode |
+| `specs/source_policy_v1.md` | allow/watch/deny per domain, min reputation 40 |
+| `specs/attribution_policy_v1.md` | mandatory source block above quiz, no full-text copy |
+| `specs/story_template_v1.md` | headline / snippet / key-points / sources / quiz box |
+| `specs/quiz_spec_v1.md` | 2–3 questions, 70% pass threshold, 3 attempts/day |
+| `specs/reward_policy_v1.md` | 10 base / +5 comment / 50 daily cap / 0.3× new-user |
+| `specs/kpi_spec_v1.md` | 6 primary KPIs, alert thresholds, 15-min dashboard refresh |
+| `specs/data_model_mvp.sql` | Full schema: users, stories, quizzes, attempts, ledger, fraud |
+| `specs/api_contract_mvp.md` | All public endpoints with request/response shapes |
 
-**Implication for Publisher:** the project addresses a concrete product and economic problem: turning volatile attention into reliable, monetizable signals.
+### Blocked
 
----
+| ID | Blocker |
+|----|---------|
+| G-02 | 28-day calendar not created — depends on founder action |
 
-## 5. Solution Overview
+### Next open tasks (Week 1)
 
-Poli-News is a modular solution made of four elements: widget, verification engine, reward ledger, and publisher dashboard.
-
-### 5.1 Contextual widget
-A JS snippet integrated in the article displays an action box at a high-attention point (end of page or 60-80% scroll threshold). The box proposes a clear action: quiz or comment.
-
-### 5.2 Verification engine
-- Quiz: 2-3 questions, randomized from an article-level pool (target minimum 10 questions per pool).
-- Comment: lightweight semantic validation (minimum length, deduplication, anti-spam patterns).
-
-### 5.3 Off-chain credit ledger
-Each reward is an auditable write with reason and timestamp. The ledger supports crediting, revocation, daily caps, and account-reputation controls.
-
-### 5.4 Editorial redemption
-For MVP, redemption options are limited to simple editorial benefits:
-- subscription discount (for example, EUR1 or percentage);
-- 24-hour premium access.
-
-Limiting the catalog reduces operational complexity and financial risk in the first weeks.
-
-### 5.5 Design principles
-- Minimal user-side friction.
-- Full publisher-side control.
-- Native KPI tracking.
-- Future on-chain evolution only if results justify it.
-
-**Implication for Publisher:** the solution can be adopted incrementally without technology lock-in and with direct control of reward costs.
+`W1-03` Implement RSS collector → `W1-04` Normalization → `W1-05`…`W1-09` (see `MASTER_CHECKLIST.md`)
 
 ---
 
-## 6. MVP Scope (2-4 weeks)
+## 3. System Architecture
 
-### 6.1 In scope
-1. Widget integration on a set of 20-50 articles.
-2. Lightweight login (email magic link or social).
-3. Operational quiz/comment/balance/dashboard APIs.
-4. Auditable off-chain reward ledger.
-5. 1-2 active redemption options.
-6. Baseline anti-fraud rules + semi-manual review.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      OFF-CHAIN LAYER (MVP)                  │
+│                                                             │
+│  Google News RSS ──► Ingestion Worker ──► Normalization     │
+│                            │                    │           │
+│                       Source Filter         Dedup + URL     │
+│                            │                Resolver        │
+│                            ▼                    │           │
+│                      Stories DB ◄───────────────┘          │
+│                            │                               │
+│               ┌────────────┼────────────┐                  │
+│               ▼            ▼            ▼                  │
+│          Quiz Engine   Comment      Attribution             │
+│               │        Engine       Guard                   │
+│               ▼            │                               │
+│          Rewards Ledger ◄──┘                               │
+│               │                                            │
+│          Fraud Engine                                       │
+│               │                                            │
+│       Publisher Dashboard                                   │
+│                                                             │
+├─────────────────── DATA LAYER ──────────────────────────────┤
+│                                                             │
+│  reading_sessions   quiz_qa_pairs   comprehension_events   │
+│  annotation_tasks   topic_signals   attention_analytics     │
+│                                                             │
+├───────────────── BLOCKCHAIN LAYER (Phase 2) ────────────────┤
+│                                                             │
+│  RewardDistributor.sol ──► ReadingVault.sol ──► PoliToken  │
+│         (Sepolia → Base/Arbitrum + Solana bridge)           │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### 6.2 Out of scope
-1. End-user wallet and crypto-asset management.
-2. KYC/AML.
-3. Cash-out in fiat.
-4. Extended reward marketplace.
-5. Enterprise multi-publisher architectures.
+### Component responsibilities
 
-### 6.3 Suggested milestones
-| Week | Objective | Output |
-|---|---|---|
-| 1 | Technical foundations | Basic widget, lightweight auth, DB schema, quiz/attempt endpoints |
-| 2 | Reward and dashboard | Ledger, balance, minimal KPI dashboard, redemption no.1 |
-| 3 | Anti-fraud hardening | Rate limit, caps, initial reputation, fraud flags, review queue |
-| 4 | Pilot run and tuning | KPI analysis, threshold tuning, go/no-go report |
-
-### 6.4 Minimum resources
-- 1 full-stack engineer.
-- 1 product/publisher reference owner.
-- 1 content owner for quiz-pool creation.
-- 1 operations owner for fraud review.
-
-### 6.5 MVP completion criterion
-The MVP is "complete" when:
-- the full user flow works end to end;
-- core KPIs are visible on dashboard;
-- frequent abuse cases have containment rules;
-- redemption is reliably redeemable;
-- the team can make a go/no-go decision on real data.
-
-**Implication for Publisher:** a narrow scope maximizes learning speed and minimizes the risk of spending on unvalidated features.
-
----
-
-## 7. Product Flow & UX
-
-### 7.1 User flow
-1. User reads the article.
-2. At the defined threshold, the "Unlock reward" box appears.
-3. User chooses quiz or comment.
-4. System evaluates outcome.
-5. If successful, credits are added to ledger.
-6. User sees balance and redemption options.
-
-### 7.2 Conversion-oriented micro-copy
-Example CTAs:
-- "Unlock 10 credits: answer 2 questions."
-- "Share a useful comment and earn a bonus."
-
-Copy must emphasize immediate benefit, not technical mechanics.
-
-### 7.3 UX constraints
-- Target action time: 20-60 seconds.
-- Max quiz attempts per article/day: 3.
-- Cooldown between attempts: backend-defined.
-- 1 reward per article/account.
-
-### 7.4 Perceived quality
-The user must perceive a fair process:
-- quiz solvable through real reading;
-- rewards clear before participation;
-- immediate result feedback;
-- transparent credit history.
-
-### 7.5 Events to track
-- `box_viewed`
-- `quiz_started`
-- `quiz_passed`
-- `comment_submitted`
-- `reward_credited`
-- `reward_redeemed`
-
-These events are the basis for funnel KPIs and drop-off diagnosis.
-
-**Implication for Publisher:** clear and short UX is necessary to produce enough valid data volume during the pilot month.
+| Component | Role | Key dependencies |
+|-----------|------|-----------------|
+| Ingestion Worker | Fetches and parses Google News RSS every 15 min | `feedparser`, `httpx`, PostgreSQL |
+| Normalization | Extracts title/snippet/source/date, validates mandatory fields | Internal rules, no LLM in MVP |
+| Quiz Engine | Generates question pool per story, serves randomized 2–3 question sets | OpenAI `gpt-4o-mini` for pool generation, PostgreSQL for storage |
+| Comment Engine | Validates comment quality (length, dedup, spam patterns) | Internal heuristics, optional `fasttext` for language check |
+| Rewards Ledger | Append-only credit/debit/revoke log per user | PostgreSQL with `entry_id`, `reason`, `delta_credits` |
+| Fraud Engine | Velocity checks, clustering, rate limiting | PostgreSQL + Redis for counters |
+| Data Layer | Stores behavioral data structured for AI export | PostgreSQL + S3-compatible storage (Cloudflare R2 or AWS S3) |
+| Blockchain Layer | Issues $POLI on-chain against off-chain vouchers | Solidity (Foundry), Ethereum Sepolia, Solana Devnet |
 
 ---
 
-## 8. Technical Architecture (MVP)
+## 4. MVP Off-Chain Layer
 
-### 8.1 Core components
+### 4.1 Content ingestion
 
-| Component | Role | Input | Output |
-|---|---|---|---|
-| Widget JS | In-article UI + event tracking | `publisher_id`, `article_id`, auth token | API calls, funnel events |
-| API Backend | Quiz/comment/reward logic | widget requests + policy | verification outcome, balance, dashboard |
-| Database | Transactional persistence | users, articles, attempts | reward state, audit history |
-| Fraud Engine (rules) | Baseline risk signals | attempt velocity, account/IP patterns | `fraud_signals`, review flags |
-| Publisher Dashboard | Operational KPI monitoring | backend aggregates | conversion, costs, alerts |
+Feeds are sourced from Google News RSS. The registry covers 30 active feeds across 3 locales (en-US, en-GB, it-IT) and 10 topic slugs.
 
-**Implication for Publisher:** architecture is modular and can be inserted next to existing editorial systems without replatforming.
+**Topics (frozen, do not rename during pilot):**
 
-### 8.2 Widget interface (public)
+| Slug | Description |
+|------|-------------|
+| `politics` | Elections, institutions, diplomacy, public policy |
+| `economy` | Macro trends, inflation, central banks, labor |
+| `world` | International news and geopolitics |
+| `technology` | AI, software, hardware, platforms |
+| `health` | Public health, medicine, healthcare systems |
+| `climate` | Energy transition, climate risks, environment |
+| `markets` | Equity, bonds, FX, commodities |
+| `security` | Cybersecurity, defense, intelligence |
+| `business` | Company news, strategy, M&A |
+| `science` | Research, discoveries, science policy |
 
-Minimum parameters:
-- `publisher_id` (string)
-- `article_id` (string)
-- `user_session_id` (optional string)
-- `placement` (`end_of_article` | `scroll_threshold`)
+**Ingestion policy (summary):** 15-minute refresh with ±60s jitter. 8s request timeout. Max 3 retries with backoff (1s / 3s / 9s). Stale mode activates after 3 consecutive failures — system continues serving last successful snapshot and raises an alert. User-agent: `PoliNewsMVPFeedCollector/1.0`.
 
-Standardized events:
-- `box_viewed`
-- `quiz_started`
-- `quiz_passed`
-- `comment_submitted`
+### 4.2 Story format
 
-Configuration example:
+Each story page renders: topic badge → headline → snippet (≤320 chars) → key points (3–5 bullets synthesized internally) → source list (name + outbound link, must appear above quiz box) → verification box → credits balance teaser.
+
+Content guardrails: no full-text copy of source articles, no paywalled content reproduction, every page shows the disclaimer *"Summary generated by Poli-News from public source metadata"*.
+
+### 4.3 Quiz system
+
+- Pool size target: 10 candidate questions per story. Minimum viable: 4 (for short stories).
+- At runtime: 2–3 questions served, randomized from pool. Mix: at least 1 comprehension + at least 1 detail question.
+- Pass threshold: 70%.
+- Attempt limits: max 3 per story per day, 120s cooldown between attempts.
+- One reward per story per account — enforced at ledger write time.
+
+**Quiz pool generation (provider: OpenAI):**
+
+```python
+# Provider: OpenAI — model: gpt-4o-mini (cost-efficient for bulk generation)
+# Estimated cost: ~$0.001 per story pool (10 questions)
+# API docs: https://platform.openai.com/docs/api-reference/chat
+
+response = openai.chat.completions.create(
+    model="gpt-4o-mini",
+    response_format={"type": "json_object"},
+    messages=[
+        {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
+        {"role": "user", "content": f"Story: {story_headline}\n\n{story_snippet}\n\nKey points:\n{key_points}"}
+    ]
+)
+```
+
+The system prompt instructs the model to output a JSON array of question objects: `{question_id, question_text, options: [{id, text}], correct_option_id, type: "comprehension"|"detail", difficulty: 1–3}`.
+
+Anti-abuse checks: reject attempts where `client_elapsed_seconds` < 8 (configurable). Flag repeated identical answer patterns across accounts via `fraud_signals`.
+
+### 4.4 Reward policy
+
+| Rule | Value |
+|------|-------|
+| `base_reward` | 10 credits for quiz pass |
+| `bonus_reward` | +5 credits for valid comment |
+| `daily_cap` | 50 credits per user per day |
+| `new_user_multiplier` | 0.3× for first 7 days |
+| Revocation | Allowed for: `fraud`, `duplicate_reward`, `policy_violation` |
+
+Revocation writes a negative ledger entry with reason code — prior entries are never deleted, preserving the audit trail.
+
+### 4.5 Widget integration
+
+One JS snippet. No server-side changes required on the publisher side.
 
 ```html
-<script src="https://cdn.polinews.example/widget.js"
+<script src="https://cdn.polinews.io/widget.js"
   data-publisher-id="pub_001"
   data-article-id="art_2026_03_001"
   data-placement="scroll_threshold"
@@ -285,245 +231,701 @@ Configuration example:
 </script>
 ```
 
-**Implication for Publisher:** integration requires one snippet and minimal configuration, reducing technical adoption cost.
+Tracked events: `box_viewed`, `quiz_started`, `quiz_passed`, `comment_submitted`, `reward_credited`, `reward_redeemed`.
 
-### 8.3 Public MVP API
+### 4.6 Authentication (MVP)
 
-#### `GET /quiz?article_id=...`
-- Purpose: retrieve randomized quiz for an article.
-- 200 response: `quiz_id`, question/options list, `attempts_remaining`.
-- Errors: 404 article not found, 429 rate limit.
+Magic link email (no password). Optionally: Google/GitHub OAuth. Session stored as a signed JWT with 7-day expiry. Provider options:
 
-#### `POST /attempt`
-- Purpose: submit quiz answers.
-- Minimum input:
+- **Self-hosted:** [Lucia Auth](https://lucia-auth.com/) + PostgreSQL sessions
+- **Managed (recommended for MVP speed):** [Clerk](https://clerk.com/) — free tier covers pilot scale, magic link built-in, ~10 min integration
+
+---
+
+## 5. Blockchain Layer (Phase 2)
+
+Blockchain is not a dependency for the 4-week pilot. It activates only after Gate A/B/C are passed and the off-chain loop is validated.
+
+### 5.1 Token: $POLI
+
+ERC-20 utility token. Primary uses: claim verified-read rewards, stake for premium publisher access, governance votes on treasury emission rate. The token is **not** marketed as an investment. It is a utility token under MiCA classification.
+
+### 5.2 Smart contracts
+
+Three contracts, deployed independently, upgradeable via OpenZeppelin Transparent Proxy.
+
+**`PoliToken.sol`**  
+Standard ERC-20. Mint function callable only by `ReadingVault`. Zero premint. No founder allocation visible in the token contract.
+
+**`ReadingVault.sol`**  
+Accepts USDC deposits from publishers. Holds USDC and $POLI reserves. Enforces on-chain rate limits: max X USDC outflow per 24h (configurable by governance). Calls `PoliToken.mint()` on validated redemptions.
+
+**`RewardDistributor.sol`**  
+Verifies ECDSA voucher signatures from the Poli-News backend server key. Checks nonce registry to prevent double-spend. Calls vault on successful verification. This is the contract the user interacts with directly. Must be audited before mainnet.
+
+**Voucher format (off-chain → on-chain bridge):**
+
 ```json
 {
-  "quiz_id": "qz_123",
-  "article_id": "art_001",
-  "answers": [{"question_id": "q1", "choice_id": "c2"}],
-  "client_elapsed_seconds": 34
+  "user_address": "0x...",
+  "amount_poli": 150,
+  "story_id": "story_abc123",
+  "nonce": "uuid-v4-unique-per-claim",
+  "expiry": 1741000000,
+  "server_signature": "0x<ecdsa_sig>"
 }
 ```
-- 200 response: `passed`, `score`, `credits_awarded`, `cooldown_seconds`.
-- Errors: 400 invalid payload, 403 attempts exhausted, 409 reward already assigned, 429 rate limit.
 
-#### `POST /comment`
-- Purpose: submit comment for partial reward.
-- Minimum input:
-```json
-{
-  "article_id": "art_001",
-  "text": "User comment..."
-}
+### 5.3 Network strategy
+
+| Phase | Network | Rationale |
+|-------|---------|-----------|
+| MVP | Ethereum Sepolia testnet | Free, EVM-compatible, widely supported |
+| Phase 2 mainnet | Base (Coinbase L2) or Arbitrum | ~$0.001 per transaction vs ~$2–5 on L1 |
+| Cost optimization | Solana | ~$0.00025 per transaction, large retail wallet base |
+| Future | Cardano | If specific EU regulatory positioning is needed |
+
+**Multichain strategy (no canonical bridge):** Rather than bridging the token, issue separate supply pools per chain. Each chain's `RewardDistributor` accepts vouchers signed by the same backend server key. Global supply cap is enforced off-chain by the backend. This avoids bridge exploit risk entirely.
+
+### 5.4 Treasury flywheel
+
 ```
-- 200 response: `accepted`, `credits_provisional`, `review_status`.
-- Errors: 400 comment too short/spam, 409 duplicate, 429 rate limit.
+Publisher USDC → ReadingVault
+                    │
+                    ▼
+Reader claims $POLI (quiz pass voucher)
+                    │
+                    ▼
+Reader holds $POLI for premium access (demand)
+  OR
+Reader sells on DEX (Uniswap v3 pool: $POLI/USDC)
+                    │
+                    ▼
+Protocol fee (0.3% swap fee) → buyback $POLI from pool
+                    │
+                    ▼
+Price floor supported by real publisher cashflows
+```
 
-#### `GET /balance`
-- Purpose: show balance and short history.
-- 200 response: `current_balance`, `pending_balance`, `recent_transactions`.
+**Emission control:** Weekly emission budget is fixed in the vault. If 10,000 quiz passes occur in a week and the budget covers 5,000 $POLI, each pass earns 0.5 $POLI. Emission per user is variable; total weekly emission is capped. This mirrors the `daily_cap` already in `reward_policy_v1.md`.
 
-#### `GET /publisher-dashboard`
-- Purpose: publisher KPI aggregates.
-- 200 response: quiz funnel, pass rate, average time, reward spend, fraud flags.
+**Vesting:** 50% of $POLI reward is liquid immediately. 50% vests linearly over 30 days. This reduces farming pressure and separates genuine readers from bots.
 
-**Implication for Publisher:** APIs are limited but complete for an end-to-end pilot, with enough error handling for operations.
+### 5.5 Tooling
 
-### 8.4 Canonical data model (MVP)
-
-| Table | Key field | Content |
-|---|---|---|
-| `Users` | `user_id` | profile, reputation, onboarding state |
-| `Articles` | `article_id` | editorial metadata, publisher mapping |
-| `Quizzes` | `quiz_id` | question pool, version, difficulty |
-| `Attempts` | `attempt_id` | attempts, score, time, result |
-| `RewardsLedger` | `entry_id` | auditable credits/debits/revocations |
-| `FraudSignals` | `signal_id` | flag reason, severity, review state |
-
-Essential relationships:
-- `Users` 1:N `Attempts`
-- `Articles` 1:N `Quizzes`
-- `Users` 1:N `RewardsLedger`
-- `Attempts` 1:N `FraudSignals` (optional)
-
-**Implication for Publisher:** the data model clearly separates user behavior, reward economics, and fraud risk, simplifying analysis and audit.
-
-### 8.5 Reward policy types
-
-MVP policy types:
-- `base_reward`: standard credits for passed quiz (for example, 10).
-- `bonus_reward`: extra credits for valid comment (for example, +5).
-- `daily_cap`: maximum daily limit (for example, 50 credits).
-- `new_user_multiplier`: reduced coefficient for first 7 days (for example, 0.3).
-- `revocation_status`: revocation state (`none`, `pending_review`, `revoked`).
-
-Revocation logic:
-- immediate payout for positive UX;
-- possible revocation if fraud signals exceed threshold;
-- each revocation creates a tracked ledger entry.
-
-**Implication for Publisher:** simple policies provide immediate economic control while preserving flexibility for later tuning.
+| Tool | Purpose |
+|------|---------|
+| [Foundry](https://book.getfoundry.sh/) | Contract development, testing, deployment |
+| [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts) | ERC-20 base, Proxy, AccessControl |
+| [Hardhat](https://hardhat.org/) | Optional: scripting and local node for integration tests |
+| [The Graph](https://thegraph.com/) | Index on-chain events for dashboard queries |
+| [WalletConnect](https://walletconnect.com/) | Universal wallet connection in frontend |
+| [wagmi](https://wagmi.sh/) + [viem](https://viem.sh/) | React hooks for wallet interaction |
+| [Chainlink Price Feeds](https://docs.chain.link/data-feeds) | USDC/ETH price for treasury accounting |
 
 ---
 
-## 9. Fraud/Risk Controls
+## 6. Revenue Streams
 
-The MVP goal is not to eliminate every abuse case, but to make farming unprofitable and operationally manageable.
+Poli-News has four revenue streams. The first funds the MVP. The next three fund token value and protocol sustainability.
 
-### 9.1 Baseline defenses
-- Rate limit per account, session, and device fingerprint.
-- Cooldown between quiz attempts.
-- Attempt limit per article/day.
-- One reward per article/account.
-- Progressive account reputation (new users earn less).
+### 6.1 Publisher Subscription (Core)
 
-### 9.2 Plausible abuse scenarios and mitigations
+Publishers pay a monthly fee to access the Poli-News widget and verified engagement metrics. The fee includes a USDC contribution to the treasury proportional to verified reads consumed.
 
-| Abuse scenario | Signal | MVP mitigation |
-|---|---|---|
-| Serial quiz completions in 2-3 seconds | abnormal timing | temporary block + cooldown |
-| Mass creation of new accounts | device/IP cluster | new-user multiplier + onboarding limits |
-| Copied/repeated comments | high text similarity | deduplication + manual review |
-| Bursty distributed attempts | attempts/minute spikes | rate limit and anti-burst thresholds |
-| Multi-account on same article | repetitive pattern | 1 reward per article/account + correlation flags |
-| Bots on API endpoints | uniform user-agent/traffic | adaptive challenge and throttling |
-| Aggressive redemption in short window | abnormal credit usage | temporary hold and ledger verification |
+**Pricing model (pilot):**
+- Flat fee: EUR 500–2,000/month depending on article volume (20–200 articles)
+- Variable: EUR 0.05 per verified read above a base quota
+- Treasury contribution: 40% of the flat fee is deposited as USDC into `ReadingVault`
 
-### 9.3 Review operations
-- Daily review queue with priority on high-severity signals.
-- Manual revocation supported by evidence (timestamp, IP cluster, velocity).
-- Dashboard view with `fraud_signals_open` and resolution status.
-
-### 9.4 Minimum anti-fraud KPIs
-- `fraud_flag_rate` on total attempts.
-- `revocation_rate` on issued rewards.
-- `false_positive_review_rate` on closed flags.
-
-**Implication for Publisher:** the anti-fraud model prioritizes speed and sustainable operational cost during pilot, without introducing premature enterprise anti-abuse stacks.
+This is the only revenue stream active in the 4-week MVP.
 
 ---
 
-## 10. Economics & KPI Framework
+### 6.2 AI Training Data Licensing
 
-### 10.1 Primary economic unit
-The main metric is **Cost per Verified Read**:
+**What it is:** The reading and quiz interaction data generated on Poli-News is high-quality structured data for AI training. Specifically:
+- Quiz question/answer pairs with correct labels and human-generated wrong answers
+- Reading comprehension scores correlated with article topics and reading time
+- User reading time distributions per topic and content type
+- Structured Q&A in news domain (scarce in existing public datasets)
 
-`Cost per Verified Read = (Net credits issued + operational review cost) / verified reads`
+This data is valuable to AI labs training language models, reading comprehension models, and news-domain classifiers.
 
-Where net credits include revocations and daily caps.
+**Data schema additions (new tables, extends `data_model_mvp.sql`):**
 
-### 10.2 Funnel KPIs and thresholds
+```sql
+-- Captures the full behavioral session for a single article read
+CREATE TABLE reading_sessions (
+  session_id      TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(user_id),
+  story_id        TEXT NOT NULL REFERENCES stories(story_id),
+  topic_slug      TEXT NOT NULL,
+  started_at      TIMESTAMP NOT NULL,
+  scroll_depth    INTEGER,           -- 0–100 percent
+  active_seconds  INTEGER,           -- time with tab in focus
+  total_seconds   INTEGER,           -- wall-clock time
+  device_type     TEXT,              -- desktop/mobile/tablet
+  locale          TEXT,
+  FOREIGN KEY (story_id) REFERENCES stories(story_id)
+);
 
-| KPI | Base formula | Initial target | Interpretation |
-|---|---|---|---|
-| Quiz Attempt Rate | `quiz_started / box_viewed` | 15-25% | mechanic attractiveness |
-| Quiz Pass Rate | `quiz_passed / quiz_started` | 60-80% | friction/difficulty balance |
-| Avg Quiz Time | average seconds of valid attempts | 20-60s | interaction quality vs bots |
-| Verified Read Cost | net cost / verified reads | below publisher threshold | economic sustainability |
-| Fraud Flag Rate | `fraud_flags / attempts` | controlled | operational risk |
-| Redemption Rate | `redeem / users_with_credits` | monitored | perceived reward value |
+-- Stores each Q&A pair with outcome — the core training unit
+CREATE TABLE quiz_qa_pairs (
+  pair_id           TEXT PRIMARY KEY,
+  story_id          TEXT NOT NULL,
+  quiz_id           TEXT NOT NULL,
+  question_id       TEXT NOT NULL,
+  question_text     TEXT NOT NULL,
+  correct_answer    TEXT NOT NULL,
+  distractor_a      TEXT NOT NULL,
+  distractor_b      TEXT NOT NULL,
+  topic_slug        TEXT NOT NULL,
+  difficulty        INTEGER,          -- 1–3
+  avg_human_score   FLOAT,            -- updated rolling average
+  attempt_count     INTEGER DEFAULT 0,
+  created_at        TIMESTAMP NOT NULL
+);
 
-### 10.3 Complementary business metrics
-- Return-rate uplift for users exposed to widget vs control.
-- Newsletter/subscription conversion uplift on active cohort.
-- Reward cost distribution by article.
+-- Per-attempt comprehension event for fine-grained behavioral data
+CREATE TABLE comprehension_events (
+  event_id          TEXT PRIMARY KEY,
+  attempt_id        TEXT NOT NULL REFERENCES attempts(attempt_id),
+  session_id        TEXT REFERENCES reading_sessions(session_id),
+  question_id       TEXT NOT NULL,
+  chosen_option_id  TEXT NOT NULL,
+  is_correct        BOOLEAN NOT NULL,
+  elapsed_ms        INTEGER NOT NULL,   -- time spent on this question
+  created_at        TIMESTAMP NOT NULL
+);
+```
 
-### 10.4 MVP budget rules
-- Predefined monthly reward budget.
-- Daily per-user limits.
-- Automatic stop-loss on anomalous thresholds (fraud/cost).
+**Export pipeline:**
 
-### 10.5 Decision logic
-- If attempt rate and pass rate are within target, funnel is usable.
-- If verified read cost stays within threshold, model is sustainable.
-- If fraud flag rate stays operationally manageable, expansion is feasible.
+Data is exported as [Hugging Face Datasets](https://huggingface.co/docs/datasets/index)-compatible Parquet files. A nightly job (cron or Airflow DAG) runs:
 
-**Implication for Publisher:** the KPI framework directly connects pilot outcomes to economic decisions, avoiding vanity metrics.
+```python
+# Provider: Hugging Face Hub (free for public datasets, paid for private)
+# API docs: https://huggingface.co/docs/huggingface_hub/guides/upload
 
----
+from datasets import Dataset
+import pandas as pd
 
-## 11. Phase 2 Roadmap (Blockchain)
+df = pd.read_sql("""
+    SELECT p.pair_id, p.story_id, p.topic_slug, p.question_text,
+           p.correct_answer, p.distractor_a, p.distractor_b,
+           p.difficulty, p.avg_human_score, p.attempt_count
+    FROM quiz_qa_pairs p
+    WHERE p.attempt_count >= 10        -- only questions with enough signal
+      AND p.avg_human_score >= 0.65    -- majority of humans got it right
+""", conn)
 
-### 11.1 Triggers to move to Phase 2
-The transition happens only if pilot confirms:
-- sufficient user adoption;
-- sustainable economics;
-- stable anti-fraud operations.
+dataset = Dataset.from_pandas(df)
+dataset.push_to_hub("polinews/reading-comprehension-news", private=True)
+```
 
-### 11.2 Target architecture
-- Reading verification remains off-chain.
-- Backend issues signed vouchers (`user_id`, `amount`, `expiry`, `nonce`).
-- Smart contract validates signature and records final redemption.
-- Anti-double-spend based on nonce + redeem state.
+**Monetization options:**
 
-### 11.3 What goes on-chain
-- Campaign/publisher budget pools.
-- Final redemption events (possibly batch/gasless).
+| Channel | How | Estimated price |
+|---------|-----|-----------------|
+| Direct license to AI labs | One-time or annual data license agreement | USD 5,000–50,000 per dataset version |
+| [Ocean Protocol](https://oceanprotocol.com/) | Publish dataset as a data NFT, buyers pay with OCEAN | Variable, ~USD 0.01–0.10 per sample |
+| [Scale AI Data Engine](https://scale.com/data-engine) | Partner to supply domain-specific training data | Negotiated contract |
+| Hugging Face private datasets | Monthly subscription for access | USD 500–2,000/month per subscriber |
 
-### 11.4 What stays off-chain
-- Quizzes, comments, attempts, fraud signals, user reputation.
-
-### 11.5 Expected benefit
-Accounting transparency on redemptions without compromising UX and core-product operating costs.
-
-**Implication for Publisher:** blockchain becomes a trust and redemption-audit component, not a premature constraint on user experience.
-
----
-
-## 12. Pilot Plan & Decision Gates
-
-### 12.1 Pilot setup
-- Duration: 1 month.
-- Scope: 1 publisher, 20-50 articles.
-- Governance: product owner + technical owner + anti-fraud owner.
-
-### 12.2 Operational phases
-1. **Pre-launch (days 1-7):** technical integration, flow QA, quiz-pool configuration.
-2. **Controlled launch (days 8-14):** partial traffic, anti-fraud threshold calibration.
-3. **Full run (days 15-26):** KPI collection and daily alert review.
-4. **Decision window (days 27-30):** go/no-go evaluation.
-
-### 12.3 Decision gates
-- **Gate A - Usability:** attempt rate and pass rate within target band.
-- **Gate B - Sustainability:** verified-read cost within budget.
-- **Gate C - Risk:** fraud manageable without team escalation.
-
-### 12.4 Possible outcomes
-- **Go:** article expansion, increased redemption, technical hardening.
-- **Conditional Go:** policy tuning and second pilot cycle.
-- **No-Go:** reward suspension or pivot to different mechanic.
-
-### 12.5 Pilot close outputs
-- Final KPI report with weekly trends.
-- List of key issues and remediations.
-- Recommendation for next phase with cost/time impact.
-
-**Implication for Publisher:** the pilot yields a management decision based on evidence, not qualitative perception.
+**Privacy:** All exported data is pseudonymized. `user_id` is replaced with a rotating daily hash before export. No PII leaves the internal database.
 
 ---
 
-## 13. Compliance Checklist (Acceptance Criteria)
+### 6.3 Human Verification Tasks (RLHF Data Sales)
 
-| Criterion | Status | Evidence in document |
-|---|---|---|
-| 8-12 equivalent pages | Covered | 12-section structure + tables |
-| B2B publisher audience | Covered | Business-technical tone across all sections |
-| Clear MVP vs Phase 2 distinction | Covered | Sections 2, 10, 11 |
-| Primary KPIs present | Covered | Section 10 |
-| >=1 architecture table and >=1 KPI table | Covered | Sections 8 and 10 |
-| No unrealistic technical blockers | Covered | MVP scope and out-of-scope in Section 6 |
+**What it is:** Some quiz questions are not standard comprehension questions — they are micro-annotation tasks designed to help AI systems learn human judgment on news content. These tasks are indistinguishable from regular quiz questions in the user's experience but generate labeled data that AI labs pay for.
 
-**Implication for Publisher:** the document is ready as a baseline alignment artifact for product, technology, and business stakeholders.
+**Task types:**
+
+| Task type | User sees | AI use |
+|-----------|-----------|--------|
+| Summary validation | "Which of these summaries best represents the article?" | RLHF reward model training, summarization quality |
+| Misinformation flag | "Does this headline accurately reflect the article body?" | Fact-checking model training, claim verification |
+| Sentiment classification | "What is the overall tone of this article?" | News sentiment analysis, market signal models |
+| Bias detection | "Which source perspective is represented here?" | Media bias classifiers |
+| Relevance judgment | "Is this key point actually supported by the article?" | RAG retrieval quality |
+
+**Integration into quiz flow:**
+
+Tasks are injected transparently at the question level. The `questions` table gets a `task_type` column:
+
+```sql
+ALTER TABLE quiz_questions ADD COLUMN task_type TEXT NOT NULL DEFAULT 'comprehension';
+-- Values: 'comprehension', 'detail', 'summary_validation', 'misinformation', 'sentiment', 'relevance'
+
+ALTER TABLE quiz_questions ADD COLUMN annotation_campaign_id TEXT;
+-- Links to a specific paid annotation campaign
+```
+
+**Injection rules (to preserve UX quality):**
+- Max 1 annotation task per 3-question quiz set
+- Annotation tasks are mixed after at least 1 standard comprehension question
+- Tasks must have a plausible correct answer (not purely subjective — e.g., fact-based misinformation check)
+- Tasks with `avg_human_score < 0.55` (no consensus) are flagged and excluded from the paid export
+
+**New table:**
+
+```sql
+CREATE TABLE annotation_tasks (
+  task_id           TEXT PRIMARY KEY,
+  campaign_id       TEXT NOT NULL,
+  question_id       TEXT NOT NULL,
+  task_type         TEXT NOT NULL,
+  buyer_org         TEXT,              -- e.g. 'scale_ai', 'internal', 'anthropic'
+  payout_per_label  NUMERIC(10,4),     -- USD cents per valid human response
+  min_labels        INTEGER DEFAULT 5, -- consensus requires N responses
+  status            TEXT DEFAULT 'active',
+  created_at        TIMESTAMP NOT NULL
+);
+```
+
+**Data buyers and channels:**
+
+| Buyer / Platform | What they need | Integration |
+|-----------------|----------------|-------------|
+| [Scale AI](https://scale.com/) | News domain Q&A, fact verification | Scale AI API — post tasks to their Human Layer, receive labeled results back |
+| [Toloka](https://toloka.ai/) | Bulk annotation at low cost | Toloka API — pool of 5M+ annotators, JSON task format |
+| [Surge AI](https://www.surgehq.ai/) | High-quality RLHF data | Direct API submission, audit trail |
+| [Labelbox](https://labelbox.com/) | Managed annotation pipeline | Labelbox Data Rows API — export labeled datasets |
+| Direct to AI labs | RLHF training pairs | Custom API or S3 data room under NDA |
+
+**Pricing signal:** Scale AI publicly prices data annotation at USD 0.05–0.50 per task for simple classification. With 10,000 daily quiz attempts in a 200-article pilot, and 1-in-3 questions being annotation tasks, that is ~3,300 annotation events/day = ~USD 165–1,650/day at Scale pricing.
+
+**Backend flow:**
+
+```
+Quiz is served to user
+    │
+    └─ question.task_type == 'annotation'?
+            │
+            ├─ YES → record to comprehension_events (normal)
+            │        record to annotation_responses (separate)
+            │        if response_count >= min_labels → compute consensus
+            │        export to buyer via webhook or nightly batch
+            │
+            └─ NO  → standard comprehension scoring
+```
 
 ---
 
-## 14. Declared assumptions
+### 6.4 Verified Attention Analytics
 
-1. Primary source: strategic and operational content derived from `Polinews_Idea.docx`.
-2. No external research is mandatory in this version.
-3. No numeric competitor benchmark is included without a source.
-4. Bilingual format applied as requested in the source whitepaper: full IT body + EN executive.
-5. Fixed pilot scope: 1 publisher, 20-50 articles, 1 month.
+**What it is:** Aggregate, publisher-facing and researcher-facing analytics derived from verified reading behavior. Unlike standard analytics (pageviews, time on page) these metrics are based on confirmed comprehension — a user who passes the quiz definitively read and understood the article.
 
-**Implication for Publisher:** the whitepaper is suitable for initial decisions and can be refined into a v0.2 version with pilot-observed data.
+**Why it is valuable:** Traditional attention metrics (scroll depth, time on page) are easily inflated and hard to trust. A "comprehension score" derived from a quiz pass is a verified proxy for genuine engagement. Publishers can use it for editorial decisions, advertisers can pay premiums for placements on high-comprehension articles, and researchers can study news consumption.
+
+**Metrics generated per story:**
+
+| Metric | Formula | Notes |
+|--------|---------|-------|
+| `comprehension_score` | `quiz_passed / quiz_started` for that story | Verified engagement rate |
+| `engagement_score` | Weighted composite: `0.4 × comprehension_score + 0.3 × avg_active_read_seconds/60 + 0.3 × comment_accept_rate` | Normalized 0–100 |
+| `reading_time_p50` | Median `active_seconds` across sessions for that story | P50/P75/P95 buckets |
+| `topic_interest_signal` | `quiz_started / box_viewed` grouped by topic_slug | Identifies high-interest topics per audience segment |
+| `difficulty_index` | `1 - avg_human_score` across question pool | Low-difficulty articles score near 0 |
+| `return_uplift` | 7-day return rate of users who passed quiz vs. those who did not | Requires cohort comparison |
+| `quality_comment_rate` | `comment_accepted / comment_submitted` | Content resonance signal |
+
+**Analytics tables (new):**
+
+```sql
+-- Pre-aggregated daily story-level metrics (refresh every 15 min during pilot)
+CREATE TABLE story_analytics (
+  analytics_id        TEXT PRIMARY KEY,
+  story_id            TEXT NOT NULL REFERENCES stories(story_id),
+  date                DATE NOT NULL,
+  box_viewed          INTEGER DEFAULT 0,
+  quiz_started        INTEGER DEFAULT 0,
+  quiz_passed         INTEGER DEFAULT 0,
+  comment_submitted   INTEGER DEFAULT 0,
+  comment_accepted    INTEGER DEFAULT 0,
+  avg_active_seconds  FLOAT,
+  avg_scroll_depth    FLOAT,
+  comprehension_score FLOAT,
+  engagement_score    FLOAT,
+  UNIQUE (story_id, date)
+);
+
+-- Topic-level weekly signals for trend analysis and research export
+CREATE TABLE topic_interest_weekly (
+  week_start          DATE NOT NULL,
+  topic_slug          TEXT NOT NULL,
+  locale              TEXT NOT NULL,
+  attempt_rate        FLOAT,    -- quiz_started / box_viewed
+  comprehension_score FLOAT,
+  avg_read_seconds    FLOAT,
+  unique_readers      INTEGER,
+  PRIMARY KEY (week_start, topic_slug, locale)
+);
+```
+
+**Analytics API (adds to `api_contract_mvp.md`):**
+
+```
+GET /analytics/story/:story_id
+  → comprehension_score, engagement_score, reading_time_p50, difficulty_index
+  → Requires: publisher API key
+
+GET /analytics/topic/:topic_slug?locale=en-US&from=2026-03-01&to=2026-03-14
+  → Weekly topic_interest_signals, comprehension trend, unique reader count
+  → Requires: publisher or researcher API key
+
+GET /analytics/publisher/benchmark
+  → Publisher's stories vs platform median across same topic/locale
+  → Requires: publisher API key
+
+GET /analytics/export?format=parquet&from=...&to=...
+  → Full attention dataset export for licensed researchers
+  → Requires: data license agreement + API key
+```
+
+**Monetization options:**
+
+| Tier | What | Price |
+|------|------|-------|
+| Publisher Standard | Story-level comprehension + engagement in dashboard (included in publisher sub) | Bundled |
+| Publisher Premium | Topic benchmark, audience segmentation, week-over-week trend | +EUR 200/month |
+| Researcher License | Full anonymized dataset export via API or S3 | EUR 500–5,000 per export |
+| Advertiser Attention Verification | Prove their ad was placed on a verified-comprehension article | EUR 0.10–0.50 per verified impression |
+
+**Analytics backend stack:**
+
+For MVP, PostgreSQL with materialized views refreshed every 15 minutes is sufficient. At scale (Phase 2), migrate aggregation to:
+- [ClickHouse](https://clickhouse.com/) — columnar DB, handles billions of events, free self-hosted
+- [TimescaleDB](https://www.timescale.com/) — PostgreSQL extension for time-series, minimal migration cost
+- [Apache Superset](https://superset.apache.org/) — open-source BI for researcher-facing dashboards
+
+---
+
+## 7. Token Economics ($POLI)
+
+### 7.1 Supply
+
+| Parameter | Value |
+|-----------|-------|
+| Token name | Poli |
+| Ticker | $POLI |
+| Max supply | 100,000,000 (100M) |
+| Initial circulating supply | 0 (no premint) |
+| Emission mechanism | Earned only by verified readers |
+| Emission rate | Fixed weekly budget set by treasury governance |
+
+### 7.2 Value support (the three pillars)
+
+The token has real value because three independent cashflows buy or hold it:
+
+1. **Publisher payments** → treasury USDC → buys $POLI to reward readers → demand
+2. **AI data licensing revenue** → treasury USDC → same buyback mechanism → demand
+3. **Human annotation payments** → treasury USDC → same → demand
+
+This means token price is not purely speculative — it is proportional to the platform's total verified-read volume and data revenue.
+
+### 7.3 Anti-death-spiral mechanics
+
+| Mechanism | How |
+|-----------|-----|
+| Weekly emission cap | Total weekly $POLI is fixed; more readers = less per reader |
+| 50% vesting (30-day) | Reduces immediate sell pressure |
+| Utility hold incentive | Staking $POLI grants premium access without redeeming |
+| Buyback floor | 20% of all protocol revenue is auto-deployed for buybacks |
+| New user multiplier | 0.3× for first 7 days — reduces farming ROI |
+
+### 7.4 Redemption options (Phase 2)
+
+- Subscription discount coupon (burn $POLI, receive USDC coupon)
+- 24h premium access (time-lock $POLI, release after period)
+- Governance vote weight (1 $POLI = 1 vote on emission rate changes)
+- Data access pass (stake $POLI for researcher API access)
+
+---
+
+## 8. Data Model
+
+See `specs/data_model_mvp.sql` for the full schema. Summary of tables:
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Profile, reputation score, onboarding state |
+| `feed_items_raw` | Raw RSS items as ingested |
+| `stories` | Normalized story records with topic and source mapping |
+| `story_sources` | Source attribution per story (name, URL, domain) |
+| `quizzes` | Question pools per story |
+| `quiz_questions` | Individual questions (extended with `task_type`, `annotation_campaign_id`) |
+| `attempts` | Quiz submission records with score, timing, pass/fail |
+| `comments` | Comment submissions with quality status |
+| `rewards_ledger` | Append-only credit/debit/revoke log |
+| `fraud_signals` | Anomaly flags with severity, reason, review state |
+| `reading_sessions` | Behavioral session data per article read *(new)* |
+| `quiz_qa_pairs` | Structured Q&A pairs for AI export *(new)* |
+| `comprehension_events` | Per-question timing and correctness *(new)* |
+| `annotation_tasks` | Annotation campaign tracking *(new)* |
+| `story_analytics` | Pre-aggregated engagement metrics *(new)* |
+| `topic_interest_weekly` | Weekly topic signal aggregates *(new)* |
+
+---
+
+## 9. API Reference
+
+Full request/response shapes in `specs/api_contract_mvp.md`. Summary:
+
+### Content
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/feed?topic=&page=` | Paginated story feed by topic |
+| GET | `/stories/:story_id` | Story page payload with quiz availability |
+
+### Verification & Rewards
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/quiz?story_id=` | Randomized quiz for a story |
+| POST | `/attempt` | Submit quiz answers, receive pass/score/credits |
+| POST | `/comment` | Submit quality comment for bonus credits |
+| GET | `/balance` | Current and pending balance, recent transactions |
+| POST | `/redeem` | Redeem credits for a reward (idempotent) |
+
+### Publisher & Analytics
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/publisher-dashboard` | Core KPIs: funnel, quality, economics, fraud |
+| GET | `/analytics/story/:story_id` | Story-level attention metrics |
+| GET | `/analytics/topic/:slug` | Topic-level weekly signals |
+| GET | `/analytics/export` | Bulk dataset export (licensed users) |
+
+### Blockchain (Phase 2)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/voucher/issue` | Issue a signed redemption voucher for on-chain claim |
+| GET | `/voucher/status/:nonce` | Check if a voucher has been consumed on-chain |
+
+---
+
+## 10. Feed Registry
+
+30 active feeds across 3 locales. Naming convention frozen: `feed_<topic>_<country>`.
+
+Coverage: all 10 topic slugs × 3 locales (US, UK, IT). Full list in `specs/feed_registry_v1.csv`.
+
+**Freeze rule (effective 2026-03-14):** New feeds or modifications are only allowed at scheduled checkpoints. URL changes are not required when current feeds are valid.
+
+---
+
+## 11. Anti-Fraud System
+
+The MVP goal is not zero fraud — it is making farming economically unprofitable and operationally manageable.
+
+### Baseline defenses
+
+- Rate limiting per account, session, and device fingerprint (Redis counters)
+- Cooldown between attempts (120s, enforced backend)
+- Max 3 attempts per story per day
+- One reward per story per account (enforced at ledger write with `UNIQUE(user_id, story_id)` constraint)
+- New-user multiplier: 0.3× for first 7 days
+- Minimum elapsed time threshold per attempt (rejects bots answering in <8s)
+
+### Abuse signals and responses
+
+| Signal | Detection | Response |
+|--------|-----------|----------|
+| Too-fast attempts | `elapsed_seconds < 8` | Reject + temporary block |
+| Mass new accounts | Device/IP cluster in `fraud_signals` | Multiplier + onboarding cap |
+| Copied comments | Text similarity hash (MinHash) | Dedup + manual review |
+| API burst | Requests/minute spike per IP | Rate limit + challenge |
+| Multi-account same story | Correlation flags in `fraud_signals` | Enforce 1-reward constraint |
+| Bots on endpoints | Uniform user-agent pattern | Adaptive throttle |
+
+### Review SOP
+
+Daily review at 14:00 (see `runbooks/antifraud_review_runbook_v1.md`). Emergency review within 2h for critical spikes (>5 high-severity signals in 60 min).
+
+Allowed reason codes for revocation: `too_fast_attempts`, `duplicate_pattern`, `multi_account_cluster`, `cooldown_bypass`, `redeem_spike`.
+
+---
+
+## 12. KPI Framework
+
+### Primary KPIs
+
+| KPI | Formula | Target | Alert threshold |
+|-----|---------|--------|-----------------|
+| Attempt rate | `quiz_started / box_viewed` | 15–25% | <12% for 2 days |
+| Pass rate | `quiz_passed / quiz_started` | 60–80% | <50% for 2 days |
+| Avg quiz time | Mean `elapsed_seconds` on valid attempts | 20–60s | <12s or >90s |
+| Verified read cost | `(net_credits + review_cost) / verified_reads` | Within publisher threshold | >budget for 2 days |
+| Fraud flag rate | `fraud_signals / attempts` | Manageable | >defined threshold |
+| Redemption rate | `redeem_users / users_with_credits` | Monitor trend | Spike >2× baseline |
+
+### New KPIs (added with data revenue layer)
+
+| KPI | Formula | Target |
+|-----|---------|--------|
+| Annotation task yield | `annotation_responses / annotation_tasks_served` | >80% valid labels per task |
+| Dataset export quality | `pairs_with_consensus / total_pairs` (consensus = ≥70% agree) | >75% |
+| Engagement score avg | Mean `engagement_score` across active stories | >40/100 |
+| Data revenue per verified read | `(annotation_revenue + analytics_revenue) / verified_reads` | Track trend |
+
+### Dashboard refresh SLA
+
+- All KPIs update every 15 minutes during pilot hours
+- Daily KPI report generated by 19:00
+- Publisher dashboard via `GET /publisher-dashboard`
+
+---
+
+## 13. Pilot Plan & Decision Gates
+
+### Timeline
+
+| Phase | Days | Objective | Output |
+|-------|------|-----------|--------|
+| Pre-launch | 1–7 | Technical integration, QA, quiz pool | Widget live on staging |
+| Controlled launch | 8–14 | 10–20% traffic, threshold calibration | Anti-fraud baselines set |
+| Full run | 15–26 | KPI collection, daily reports | Dashboard live |
+| Decision window | 27–30 | Gate evaluation, go/no-go decision | Decision memo |
+
+### Decision gates
+
+| Gate | Condition | Pass criteria |
+|------|-----------|---------------|
+| A — Usability | Attempt rate + pass rate | Both within target range |
+| B — Sustainability | Verified read cost | Within publisher-agreed threshold |
+| C — Risk | Fraud queue | No unresolved critical spikes >24h |
+
+### Possible outcomes
+
+- **Go:** Expand to more articles, activate Phase 2 blockchain, begin data licensing discussions
+- **Conditional Go:** One gate misses but trend is improving — second pilot cycle with tuned parameters
+- **No-Go:** Suspend rewards, analyze root cause, pivot mechanic if needed
+
+---
+
+## 14. Tech Stack & Provider Reference
+
+### Backend
+
+| Component | Technology | Notes |
+|-----------|-----------|-------|
+| API | FastAPI (Python) or Node.js + Hono | FastAPI preferred for ML/data pipeline integration |
+| Database | PostgreSQL 16 | Main transactional + analytics store |
+| Cache / Rate limiting | Redis (Upstash for serverless) | Attempt counters, session state |
+| Queue | BullMQ (Redis) or Celery (Python) | Ingestion jobs, quiz generation jobs |
+| File storage | Cloudflare R2 or AWS S3 | Dataset exports, Parquet files |
+| Auth | Clerk or Lucia Auth | Magic link + JWT sessions |
+
+### AI / ML
+
+| Use | Provider | Model | Estimated cost |
+|-----|----------|-------|----------------|
+| Quiz pool generation | OpenAI | `gpt-4o-mini` | ~$0.001/story |
+| Key point generation | OpenAI | `gpt-4o-mini` | ~$0.001/story |
+| Comment spam detection | FastText or `mistral-7b` self-hosted | Open source | Minimal |
+| Annotation task generation | OpenAI | `gpt-4o` | ~$0.005/task batch |
+| Dataset embeddings (for dedup) | OpenAI | `text-embedding-3-small` | ~$0.0001/1K tokens |
+
+### Blockchain
+
+| Component | Tool | Docs |
+|-----------|------|------|
+| Contract development | Foundry | https://book.getfoundry.sh |
+| ERC-20 base | OpenZeppelin Contracts v5 | https://docs.openzeppelin.com/contracts/5.x |
+| Testnet | Ethereum Sepolia | https://sepolia.etherscan.io |
+| L2 mainnet | Base | https://docs.base.org |
+| Wallet connection | WalletConnect v2 + wagmi | https://docs.walletconnect.com |
+| Onchain indexing | The Graph | https://thegraph.com/docs |
+| Price feeds | Chainlink | https://docs.chain.link/data-feeds |
+
+### Analytics
+
+| Component | Tool | Notes |
+|-----------|------|-------|
+| MVP analytics DB | PostgreSQL materialized views | Refresh every 15 min |
+| Phase 2 analytics | ClickHouse (self-hosted) or Tinybird | Columnar, handles 1B+ events |
+| BI / dashboards | Metabase or Apache Superset | Open source, self-hosted |
+| Data export format | Parquet (Apache Arrow) | Standard for AI training datasets |
+| Dataset hosting | Hugging Face Hub | Private datasets, versioned |
+
+### Data marketplace
+
+| Channel | Docs |
+|---------|------|
+| Ocean Protocol | https://docs.oceanprotocol.com |
+| Scale AI Data Engine | https://scale.com/data-engine |
+| Toloka | https://toloka.ai/docs/api |
+| Labelbox | https://docs.labelbox.com |
+
+---
+
+## 15. Compliance Notes
+
+### GDPR / Privacy
+
+- All personal data stored in EU-region infrastructure (or with EU-resident processor)
+- Reading behavior data pseudonymized before export (`user_id` replaced with rotating daily hash)
+- Users have the right to request deletion of their reading history — `DELETE /user/data` endpoint required before pilot goes live
+- Magic link auth never stores passwords; sessions expire after 7 days
+
+### MiCA (EU Crypto Asset Regulation, applicable from Dec 2024)
+
+- $POLI is structured as a **utility token**: its primary purpose is accessing editorial features (premium access, governance), not investment
+- The token is not marketed as a yield-bearing instrument
+- Whitepaper must clearly state: no guarantee of token value, token is not a security, no dividends or interest payments
+- Phase 2 legal review required before mainnet deployment in any EU country
+
+### Attribution
+
+- Every story page must display: original source name, outbound link to source article, publish timestamp, and the label *"Summary generated by Poli-News from public source metadata"*
+- No full-text copy of source articles
+- No reproduction of paywalled content
+- Source block must appear above the quiz box (enforced in `story_template_v1.md`)
+
+### AI annotation data
+
+- Users are informed in the terms of service that quiz interactions may be used to improve AI systems
+- No biometric or sensitive category data is collected
+- Annotation data exported to third parties is subject to a Data Processing Agreement (DPA)
+
+---
+
+## Stop Conditions
+
+These conditions trigger automatic suspension — no human decision required:
+
+| Condition | Action |
+|-----------|--------|
+| Fraud spike: >N critical signals unresolved >24h | Pause all reward issuance |
+| Ingestion failure: stale mode active >defined window | Pause new traffic |
+| Ledger inconsistency: balance check fails | Pause redemption immediately |
+| Treasury drawdown: daily outflow cap hit | Pause $POLI claims on-chain |
+
+---
+
+## Evidence Pack (required by Day 28)
+
+- [ ] `topics_v1` — frozen ✓
+- [ ] `feed_registry_v1` — frozen ✓
+- [ ] `ingestion_policy_v1` — written ✓
+- [ ] `source_policy_v1` — written ✓
+- [ ] `story_template_v1` — written ✓
+- [ ] `quiz_spec_v1` — written ✓
+- [ ] `reward_policy_v1` — written ✓
+- [ ] `kpi_spec_v1` — written ✓
+- [ ] `data_model_mvp.sql` (extended with data layer tables) — written ✓
+- [ ] API test report
+- [ ] Load/performance report
+- [ ] Fraud simulation log (7 scenarios)
+- [ ] Decision memo: `GO | CONDITIONAL_GO | NO_GO`
+- [ ] First dataset export sample (quiz_qa_pairs)
+- [ ] Annotation task pilot results
+
+---
+
+*Poli-News — v0.2 — 2026-03-14 — Off-Chain MVP + Blockchain Revenue Model*
