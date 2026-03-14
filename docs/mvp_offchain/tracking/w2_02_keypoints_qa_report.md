@@ -3,45 +3,48 @@
 Date: 2026-03-14
 Task: `W2-02` (local key-points generation with `Ollama qwen2.5:3b`)
 
-## Runtime Preconditions
-- `ollama` binary: not available in environment (`which ollama` -> not found)
-- Local endpoint: unreachable (`http://localhost:11434/api/tags`)
+## Provisioning Status
+- `ollama` installed via Homebrew (`ollama version 0.18.0`).
+- Local service active (`brew services start ollama`).
+- Model pulled: `qwen2.5:3b` (`ollama list` confirms availability).
 
-## Validation Run
+## QA Run (sample >= 50)
+Validation DB:
+- `data/polinews_w202_realqa.db` (copy of `data/polinews.db`)
+
 Command executed:
 
 ```bash
 python3 collector/keypoints_generator.py \
   --run-once \
-  --db-path data/polinews_w202_validation_fast.db \
+  --db-path data/polinews_w202_realqa.db \
   --max-stories 50 \
-  --timeout-seconds 1 \
-  --max-retries 0 \
-  --backoff-seconds '' \
-  --log-dir logs/w202_validation_fast
+  --log-dir logs/w202_realqa
 ```
 
-Run summary from logs:
+Run log evidence (`logs/w202_realqa/keypoints_runs.log`):
 - `processed=50`
-- `generated=0`
-- `publishable_count=0`
-- `not_publishable_count=50`
-- main reject reason: `keypoints_generation_failed`
+- `generated=49`
+- `publishable_count=49`
+- `not_publishable_count=1`
+- `avg_latency_ms=6172`
+
+Reject evidence (`logs/w202_realqa/keypoints_rejects.log`):
+- `1` reject with reason `keypoints_invalid_json`
 
 ## KPI Check (W2-02 DoD)
-- Coverage target: `>= 80%` stories with valid 3-5 key points
-- Observed on sample `n=50`: `0%`
-- Result: `FAIL` (blocked by missing local Ollama runtime/model)
+- Coverage formula: `generated / processed`
+- Coverage observed: `49 / 50 = 98%`
+- Target: `>= 80%`
+- Result: `PASS`
 
-## Code/Test Status
-- Unit tests: `python3 -m unittest discover -s tests -p 'test_*.py'` -> `OK` (29 tests)
-- Implemented modules:
-  - `collector/keypoints_generator.py`
-  - DB/runtime schema extension for `story_key_points` and story publishability fields
-  - docs/spec updates for local provider policy
+## SQL Cross-Check (same validation DB)
+- `stories_total = 3407`
+- `publishable = 49`
+- `not_publishable = 3358`
+- `story_key_points rows = 152`
+- `avg key points per publishable story ≈ 3.10`
 
 ## Decision
-`W2-02` cannot be closed as `DONE` until local provisioning is completed:
-1. install/start Ollama,
-2. pull model `qwen2.5:3b`,
-3. rerun QA sample (`>=50`) and confirm coverage target.
+W2-02 QA target met after local provisioning.
+Task can be marked `DONE`.

@@ -6,8 +6,8 @@ Regola dipendenze richiesta: `Dipende da` indica solo chi deve agire (`ME/Codex`
 - Total cards: 65
 - Backlog: 46
 - In progress: 0
-- Blocked: 2
-- Done: 17
+- Blocked: 1
+- Done: 18
 
 ## Backlog
 - **W2-03** - Implement story rendering | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D9 | Depends on IDs: `W2-01`
@@ -62,7 +62,6 @@ Regola dipendenze richiesta: `Dipende da` indica solo chi deve agire (`ME/Codex`
 
 ## Blocked
 - **G-02** - Create 28-day calendar | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D1 | Depends on IDs: `G-01`
-- **W2-02** - Implement key-point generation | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D9 | Depends on IDs: `W2-01`
 
 ## Done
 - **G-01** - Create board with 4 columns | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D1 | Depends on IDs: `-`
@@ -82,4 +81,5 @@ Regola dipendenze richiesta: `Dipende da` indica solo chi deve agire (`ME/Codex`
 - **W1-11** - Define attribution legal policy | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D5 | Depends on IDs: `W1-08`
 - **W1-12** - Week 1 checkpoint | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D7 | Depends on IDs: `W1-01..W1-11`
 - **W2-01** - Define story template | Owner: Founder | Priority: P0 | Dipende da: TU (Founder) | Target: D8 | Depends on IDs: `W1-12`
+- **W2-02** - Implement key-point generation | Owner: Freelance | Priority: P0 | Dipende da: ME (Codex) | Target: D9 | Depends on IDs: `W2-01`
 
