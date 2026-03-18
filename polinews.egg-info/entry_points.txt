@@ -1,0 +1,3 @@
+[console_scripts]
+polinews-collect = polinews.main:collect
+polinews-serve = polinews.main:serve

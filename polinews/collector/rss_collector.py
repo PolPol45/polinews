@@ -19,8 +19,8 @@ from urllib.request import Request, urlopen
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from collector.collector_logging import CollectorLogger, utc_now_iso
-from collector.config import (
+from polinews.collector.collector_logging import CollectorLogger, utc_now_iso
+from polinews.collector.config import (
     BACKOFF_SECONDS,
     DEFAULT_DB_PATH,
     DEFAULT_FEEDS_CSV,
@@ -31,8 +31,8 @@ from collector.config import (
     STALE_THRESHOLD,
     USER_AGENT,
 )
-from collector.db import connect_db, ensure_schema, insert_feed_item_raw
-from collector.parser import FeedParseError, ParsedItem, parse_feed
+from polinews.collector.db import connect_db, ensure_schema, insert_feed_item_raw
+from polinews.collector.parser import FeedParseError, ParsedItem, parse_feed
 
 
 @dataclass

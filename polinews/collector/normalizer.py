@@ -19,8 +19,8 @@ from urllib.parse import urlsplit
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from collector.canonical_url import normalize_canonical_url, resolve_canonical_url
-from collector.config import (
+from polinews.collector.canonical_url import normalize_canonical_url, resolve_canonical_url
+from polinews.collector.config import (
     CANONICAL_RESOLVE_BACKOFF_SECONDS,
     CANONICAL_RESOLVE_MAX_RETRIES,
     CANONICAL_RESOLVE_TIMEOUT_SECONDS,
@@ -29,7 +29,7 @@ from collector.config import (
     DEFAULT_FEEDS_CSV,
     DEFAULT_LOG_DIR,
 )
-from collector.db import (
+from polinews.collector.db import (
     RawFeedItem,
     connect_db,
     dedup_key_exists,
@@ -39,7 +39,7 @@ from collector.db import (
     insert_story,
     insert_story_source,
 )
-from collector.dedup import DEDUP_REASON_CODE, build_dedup_key, build_title_fingerprint
+from polinews.collector.dedup import DEDUP_REASON_CODE, build_dedup_key, build_title_fingerprint
 
 DEFAULT_TOPICS_FILE = Path("docs/mvp_offchain/specs/topics_v1.md")
 

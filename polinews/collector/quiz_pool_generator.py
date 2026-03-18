@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from collector.config import (  # noqa: E402
+from polinews.collector.config import (  # noqa: E402
     DEFAULT_DB_PATH,
     DEFAULT_LOG_DIR,
     KEYPOINTS_MODEL,
@@ -32,7 +32,7 @@ from collector.config import (  # noqa: E402
     QUIZ_POOL_TIMEOUT_SECONDS,
     USER_AGENT,
 )
-from collector.db import (  # noqa: E402
+from polinews.collector.db import (  # noqa: E402
     connect_db,
     count_publishable_stories,
     count_quiz_available_stories,

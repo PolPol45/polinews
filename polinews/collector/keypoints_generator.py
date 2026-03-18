@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from collector.config import (
+from polinews.collector.config import (
     DEFAULT_DB_PATH,
     DEFAULT_LOG_DIR,
     KEYPOINTS_BACKOFF_SECONDS,
@@ -26,7 +26,7 @@ from collector.config import (
     OLLAMA_BASE_URL,
     USER_AGENT,
 )
-from collector.db import (
+from polinews.collector.db import (
     connect_db,
     ensure_schema,
     fetch_keypoint_candidates,

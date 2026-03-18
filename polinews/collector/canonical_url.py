@@ -6,7 +6,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-from collector.config import (
+from polinews.collector.config import (
     CANONICAL_RESOLVE_BACKOFF_SECONDS,
     CANONICAL_RESOLVE_MAX_RETRIES,
     CANONICAL_RESOLVE_TIMEOUT_SECONDS,
